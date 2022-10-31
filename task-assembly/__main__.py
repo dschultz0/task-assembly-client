@@ -44,6 +44,7 @@ rt_parser.add_argument("--extend", action="store_true")
 sb_parser = subparsers.add_parser("submit_batch")
 sb_parser.add_argument("--definition_file", default="definition.json")
 sb_parser.add_argument("--sandbox", action="store_true")
+sb_parser.add_argument("--assignments", type=int)
 sb_parser.add_argument("name")
 sb_parser.add_argument("input_file")
 sb_parser.add_argument("s3_uri_prefix")
@@ -61,6 +62,14 @@ gbr_parser.add_argument("output_file")
 c_parser = subparsers.add_parser("configure")
 c_parser.add_argument("--key")
 c_parser.add_argument("--validate", action="store_true")
+
+lw_parser = subparsers.add_parser("list_workers")
+lw_parser.add_argument("--definition_file", default="definition.json")
+lw_parser.add_argument("output_file")
+
+# lb_parser = subparsers.add_parser("list_batches")
+# lb_parser.add_argument("--definition_file", default="definition.json")
+# lb_parser.add_argument("--output_file")
 
 args = parser.parse_args()
 
@@ -158,6 +167,8 @@ elif args.command == "submit_batch":
     }
     if args.sandbox:
         params["sandbox"] = True
+    if args.assignments:
+        params["default_assignments"] = args.assignments
     batch_id = client.submit_batch(**params)
     print(f"A batch with id {batch_id} has been created")
     print(f"Results will be written to {output_uri}")
@@ -170,7 +181,10 @@ elif args.command == "get_batch_status":
     print(f" - Created: {response.get('CreatedCount', 0)}")
     print(f" - Completed: {response.get('CompletedCount', 0)}")
     print(f" - Output: {response['OutputUri']}")
-    print(f" - Total Assignments: {response.get('AssignmentCount', 0)}")
+    print(f" - Response Counts:")
+    print(f"     Task: {response.get('AssignmentCount', 0)}")
+    print(f"     Test: {response.get('TestResponseCount', 0)}")
+    print(f"     Total: {response.get('AssignmentCount', 0) + response.get('TestResponseCount', 0)}")
 elif args.command == "get_batch_results":
     response = client.get_batch(args.batch_id)
     try:
@@ -178,19 +192,39 @@ elif args.command == "get_batch_results":
         if len(results) == 0:
             print("No results yet")
         else:
-            # TODO: Detect and handle inputs and outputs with the same key
-            fieldnames = list(results[0]["Data"].keys())
-            fieldnames.extend(results[0]["Result"].keys())
-            with open(args.output_file, "w", newline='') as fp:
-                writer = csv.DictWriter(fp, fieldnames=fieldnames)
-                writer.writeheader()
+            ext = os.path.splitext(args.output_file)[1][1:]
+            if ext == "jsonl":
+                lry.s3.download(args.output_file, response['OutputUri'])
+            elif ext == "json":
+                with open(args.output_file, "w") as fp:
+                    json.dump(results, fp)
+            else:
+                # TODO: Detect and handle inputs and outputs with the same key
+                fieldnames = dict.fromkeys(results[0]["Data"].keys())
                 for result in results:
-                    obj: dict = result["Data"].copy()
-                    obj.update(result["Result"])
-                    writer.writerow(obj)
+                    if "Result" in result:
+                        fieldnames.update(dict.fromkeys(result["Result"].keys()))
+                with open(args.output_file, "w", newline='') as fp:
+                    writer = csv.DictWriter(fp, fieldnames=list(fieldnames.keys()))
+                    writer.writeheader()
+                    for result in results:
+                        obj: dict = result["Data"].copy()
+                        obj.update(result.get("Result", {}))
+                        writer.writerow(obj)
 
     except ClientError as e:
         if e.code == "404":
             print("The output file not yet available")
         else:
             raise e
+elif args.command == "list_workers":
+    definition = read_definition(args.definition_file)
+    response = client.list_workers(definition["DefinitionId"])
+    with open(args.output_file, "w", newline="") as fp:
+        writer = csv.DictWriter(fp, fieldnames=["WorkerId", "Submitted", "ScoredCount", "Points"])
+        writer.writeheader()
+        for worker in response.get("Workers", []):
+            writer.writerow(worker)
+# elif args.command == "list_batches":
+#    definition = read_definition(args.definition_file)
+#    response = client.list_batches()

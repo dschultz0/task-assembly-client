@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 setuptools.setup(
     name="task-assembly",
-    version='0.1.0',
+    version='0.1.1',
     author="Dave Schultz",
     author_email="dave@daveschultzconsulting.com",
     description="SDK and CLI for using the Task Assembly crowdwork service",
