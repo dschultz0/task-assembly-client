@@ -67,9 +67,17 @@ lw_parser = subparsers.add_parser("list_workers")
 lw_parser.add_argument("--definition_file", default="definition.json")
 lw_parser.add_argument("output_file")
 
-# lb_parser = subparsers.add_parser("list_batches")
-# lb_parser.add_argument("--definition_file", default="definition.json")
-# lb_parser.add_argument("--output_file")
+lb_parser = subparsers.add_parser("list_batches")
+lb_parser.add_argument("--definition_file", default="definition.json")
+lb_parser.add_argument("--output_file")
+
+rds_parser = subparsers.add_parser("redrive_scoring")
+rds_parser.add_argument("--definition_file", default="definition.json")
+
+rb_parser = subparsers.add_parser("redrive_batch")
+rb_parser.add_argument("batch_id")
+rb_parser.add_argument("--extend", action="store_true")
+
 
 args = parser.parse_args()
 
@@ -225,6 +233,11 @@ elif args.command == "list_workers":
         writer.writeheader()
         for worker in response.get("Workers", []):
             writer.writerow(worker)
-# elif args.command == "list_batches":
-#    definition = read_definition(args.definition_file)
-#    response = client.list_batches()
+elif args.command == "list_batches":
+    definition = read_definition(args.definition_file)
+    response = client.list_batches()
+elif args.command == "redrive_scoring":
+    definition = read_definition(args.definition_file)
+    client.redrive_scoring(definition["DefinitionId"])
+elif args.command == "redrive_batch":
+    client.redrive_batch(args.batch_id, args.extend)
