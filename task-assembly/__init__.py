@@ -196,6 +196,7 @@ class AssemblyClient(APIClient):
             sandbox=False,
             default_assignments=None,
             max_assignments=None,
+            sfn_token=None,
     ):
         url = self.ENDPOINT + "/task/create"
         params = self._map_parameters(
@@ -207,6 +208,7 @@ class AssemblyClient(APIClient):
                 "sandbox": "Sandbox",
                 "default_assignments": "DefaultAssignments",
                 "max_assignments": "MaxAssignments",
+                "sfn_token": "SFNToken"
             },
         )
         return self.post(url, data=params)["TaskId"]
