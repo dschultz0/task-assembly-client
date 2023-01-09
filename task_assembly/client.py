@@ -1,16 +1,15 @@
+import io
+import json
 from apiclient import (
     APIClient,
     HeaderAuthentication,
     JsonResponseHandler,
     JsonRequestFormatter,
 )
-import io
-import uuid
-import warnings
-from html import escape
-from .handlers import create_consolidation_lambda
 from urllib.parse import urlencode
-import json
+
+from .handlers import create_consolidation_lambda
+from .utils import display_iframe, TASK_DEFINITION_ARG_MAP
 
 
 def _arg_decorator(function):
@@ -19,34 +18,6 @@ def _arg_decorator(function):
         return function(*args, **kwargs)
 
     return inner
-
-
-TASK_DEFINITION_ARG_MAP = {
-    "definition_id": "DefinitionId",
-    "task_type_id": "TaskType",
-    "template": "Template",
-    "title": "Title",
-    "description": "Description",
-    "reward_cents": "RewardCents",
-    "lifetime": "Lifetime",
-    "assignment_duration": "AssignmentDuration",
-    "default_assignments": "DefaultAssignments",
-    "max_assignments": "MaxAssignments",
-    "auto_approval_delay": "AutoApprovalDelay",
-    "keywords": "Keywords",
-    "qualification_requirements": "QualificationRequirements",
-    "load_handler": "LoadHandler",
-    "render_handler": "RenderHandler",
-    "submission_handlers": "SubmissionHandlers",
-    "consolidation_handlers": "ConsolidationHandlers",
-    "scoring_handler": "ScoringHandler",
-    "callback_handlers": "CallbackHandlers",
-    "handler_code": "HandlerCode",
-    "gold_answers": "GoldAnswers",
-    "test_policy": "TestPolicy",
-    "result_layout": "ResultLayout"
-}
-REV_TASK_DEFINITION_ARG_MAP = {v: k for k, v in TASK_DEFINITION_ARG_MAP.items()}
 
 
 class AssemblyClient(APIClient):
@@ -197,6 +168,7 @@ class AssemblyClient(APIClient):
             default_assignments=None,
             max_assignments=None,
             sfn_token=None,
+            qualification_requirements=None
     ):
         url = self.ENDPOINT + "/task/create"
         params = self._map_parameters(
@@ -208,7 +180,8 @@ class AssemblyClient(APIClient):
                 "sandbox": "Sandbox",
                 "default_assignments": "DefaultAssignments",
                 "max_assignments": "MaxAssignments",
-                "sfn_token": "SFNToken"
+                "sfn_token": "SFNToken",
+                "qualification_requirements": "QualificationRequirements"
             },
         )
         return self.post(url, data=params)["TaskId"]
@@ -276,6 +249,14 @@ class AssemblyClient(APIClient):
         url = self.ENDPOINT + "/batch/expire"
         params = self._map_parameters(
             locals(), self.expire_batch.actual_kwargs, {"batch_id": "BatchId"}
+        )
+        return self.post(url, data=params)
+
+    @_arg_decorator
+    def expire_task(self, task_id):
+        url = self.ENDPOINT + "/task/expire"
+        params = self._map_parameters(
+            locals(), self.expire_task.actual_kwargs, {"task_id": "TaskId"}
         )
         return self.post(url, data=params)
 
@@ -406,57 +387,3 @@ class AssemblyClient(APIClient):
         return create_consolidation_lambda(
             handler, name, role, imports, functions, files, layers, timeout
         )
-
-
-def display_iframe(url=None, html=None, width=None, height=600, frame_border=5):
-    frame_id = "f" + str(uuid.uuid4())[:8]
-    w = 900 if width is None else width
-    try:
-        from IPython.display import display, HTML
-
-        if html:
-            _html = '<iframe id="{}" width="{}" height="{}" srcdoc="{}" frameborder="{}" allowfullscreen></iframe>'.format(
-                frame_id, w, height, escape(html), frame_border
-            )
-        else:
-            _html = '<iframe id="{}" width="{}" height="{}" src="{}" frameborder="{}" allowfullscreen></iframe>'.format(
-                frame_id, w, height, url, frame_border
-            )
-
-        if width is None:
-            _html += """<script language="JavaScript">
-                document.getElementById("{0}").width = document.getElementById("{0}").parentElement.clientWidth - 25
-                window.addEventListener("resize", function(){{
-                    document.getElementById("{0}").width = document.getElementById("{0}").parentElement.clientWidth - 25
-                }})</script>""".format(
-                frame_id
-            )
-
-        # this will throw an irrelevant warning about considering the iframe element
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            display(HTML(_html))
-
-    except ImportError as e:
-        raise Exception(
-            "Display operations are not supported outside of the IPython environment"
-        )
-
-
-def display_html(html):
-    try:
-        from IPython.display import display, HTML
-
-        display(HTML(html))
-    except ImportError as e:
-        raise Exception(
-            "Display operations are not supported outside of the IPython environment"
-        )
-
-
-def display_link(url, prefix):
-    display_html(
-        '<p><strong>{0}:</strong> <a href="{1}" target="_blank">{1}</a></p>'.format(
-            prefix, url
-        )
-    )
