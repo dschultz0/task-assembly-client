@@ -329,6 +329,16 @@ class AssemblyClient(APIClient):
     def list_workers(self, definition_id):
         return self.get(f"{self.ENDPOINT}/taskDefinition/{definition_id}/workers")
 
+    def list_batches(self, definition_id=None, max_results=None, start_key=None):
+        params = {}
+        if definition_id:
+            params["TaskDefinitionId"] = definition_id
+        if max_results:
+            params["MaxResults"] = max_results
+        if start_key:
+            params["StartKey"] = start_key
+        return self.get(f"{self.ENDPOINT}/batch/list", params)
+
     @_arg_decorator
     def exclude_worker(self, worker_id, reverse=False):
         url = self.ENDPOINT + "/worker/exclude"

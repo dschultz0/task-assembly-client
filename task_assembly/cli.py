@@ -1,12 +1,14 @@
 import json
 import os.path
 import posixpath
+from datetime import datetime
 
 import larry as lry
 import argparse
 import csv
 
 from botocore.exceptions import ClientError
+from tabulate import tabulate
 
 from .client import AssemblyClient
 from .utils import REV_TASK_DEFINITION_ARG_MAP
@@ -205,10 +207,48 @@ class CLI:
             for worker in response.get("Workers", []):
                 writer.writerow(worker)
 
-    def list_batches(self, definition_file):
-        definition = self.read_definition(definition_file)
-        response = self.client.list_batches()
-        return response
+    def list_batches(self, definition_file, output_file=None, all_definitions=False):
+        params = {}
+        if not all_definitions:
+            definition = self.read_definition(definition_file)
+            params["definition_id"] = definition["DefinitionId"]
+        batches = []
+        has_available = True
+        while has_available:
+            response = self.client.list_batches(**params)
+            batches.extend(response.get("Batches", []))
+            if response.get("NextKey"):
+                params["StartKey"] = response["NextKey"]
+            else:
+                has_available = False
+        batches.sort(key=lambda x: x["Created"], reverse=True)
+        for batch in batches:
+            batch["Created"] = datetime.fromisoformat(batch["Created"]).strftime("%m/%d/%Y %H:%M")
+            if "OrganizationId" in batch:
+                del batch["OrganizationId"]
+            if "Updated" in batch:
+                del batch["Updated"]
+        if output_file:
+            self._write_output_file(
+                batches,
+                output_file,
+                ["Id", "Name", "State", "Created", "CreatedCount", "CompletedCount"]
+            )
+        else:
+            fields = {
+                "Id": "Id",
+                "Name": "Name",
+                "State": "State",
+                "Created": "Created",
+                "CreatedCount": "Count",
+                "CompletedCount": "Completed",
+                "StateCounts.Success": "Successful",
+            }
+            table = []
+            for b in batches:
+                row = [b.get(k.split(".")[0], {}).get(k.split(".")[1]) if "." in k else b.get(k) for k in fields.keys()]
+                table.append(row)
+            print(tabulate(table, headers=list(fields.values())))
 
     def redrive_scoring(self, definition_file):
         definition = self.read_definition(definition_file)
@@ -229,6 +269,51 @@ class CLI:
             definition_ = json.load(ffp)
         return definition_
 
+    def _write_output_file(self, results, output_file, field_order):
+        ext = os.path.splitext(output_file)[1][1:].lower()
+        delimiter = self.delimiter_map.get(ext)
+        if ext == "jsonl":
+            with open(output_file, "w") as fp:
+                fp.writelines(results)
+        elif ext == "json":
+            with open(output_file, "w") as fp:
+                json.dump(results, fp)
+        elif delimiter:
+            new_results = self._flatten_results_for_report(results, field_order)
+            fieldnames = self._get_fieldnames(new_results)
+            with open(output_file, "w", newline='') as fp:
+                writer = csv.DictWriter(fp, fieldnames=fieldnames, delimiter=delimiter)
+                writer.writeheader()
+                for result in new_results:
+                    writer.writerow(result)
+        else:
+            raise Exception("Input file must have an extension of json, jsonl, csv, tsv, or txt")
+
+    @staticmethod
+    def _flatten_results_for_report(results, field_order=None):
+        if field_order is None:
+            field_order = []
+        new_results = []
+        for r in results:
+            row = r.copy()
+            new_row = {}
+            for f in field_order:
+                new_row[f] = row.pop(f) if f in row else None
+            for k, v in row.items():
+                if isinstance(v, dict):
+                    for kk, vv in v.items():
+                        new_row[f"{k}.{kk}"] = vv
+                else:
+                    new_row[k] = v
+            new_results.append(new_row)
+        return new_results
+
+    @staticmethod
+    def _get_fieldnames(results):
+        fieldnames = dict.fromkeys(results[0].keys())
+        for result in results:
+            fieldnames.update(dict.fromkeys(result.keys()))
+        return list(fieldnames.keys())
 
 def main():
     parser = argparse.ArgumentParser("Task Assembly CLI")
@@ -308,6 +393,7 @@ def main():
 
     lb_parser = subparsers.add_parser("list_batches")
     lb_parser.add_argument("--definition_file", default="definition.json")
+    lb_parser.add_argument("--all_definitions", action="store_true")
     lb_parser.add_argument("--output_file")
     lb_parser.set_defaults(func=CLI.list_batches)
 
