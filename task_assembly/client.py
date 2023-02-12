@@ -74,6 +74,7 @@ class AssemblyClient(APIClient):
             consolidation_handlers=None,
             callback_handlers=None,
             scoring_handler=None,
+            computed_result_handler=None,
             gold_answers=None,
             test_policy=None,
     ):
@@ -81,28 +82,7 @@ class AssemblyClient(APIClient):
         params = self._map_parameters(
             locals(),
             self.create_task_definition.actual_kwargs,
-            {
-                "name": "Name",
-                "task_type_id": "TaskType",
-                "template": "Template",
-                "title": "Title",
-                "description": "Description",
-                "reward_cents": "RewardCents",
-                "lifetime": "Lifetime",
-                "assignment_duration": "AssignmentDuration",
-                "default_assignments": "DefaultAssignments",
-                "max_assignments": "MaxAssignments",
-                "auto_approval_delay": "AutoApprovalDelay",
-                "keywords": "Keywords",
-                "qualification_requirements": "QualificationRequirements",
-                "render_handler": "RenderHandler",
-                "submission_handlers": "SubmissionHandlers",
-                "consolidation_handlers": "ConsolidationHandlers",
-                "scoring_handler": "ScoringHandler",
-                "callback_handlers": "CallbackHandlers",
-                "gold_answers": "GoldAnswers",
-                "test_policy": "TestPolicy",
-            },
+            TASK_DEFINITION_ARG_MAP
         )
         if isinstance(params.get("Template"), io.IOBase):
             params["Template"] = params["Template"].read()
@@ -130,6 +110,7 @@ class AssemblyClient(APIClient):
             consolidation_handlers=None,
             callback_handlers=None,
             scoring_handler=None,
+            computed_result_handler=None,
             gold_answers=None,
             test_policy=None,
             result_layout=None,
@@ -168,7 +149,8 @@ class AssemblyClient(APIClient):
             default_assignments=None,
             max_assignments=None,
             sfn_token=None,
-            qualification_requirements=None
+            qualification_requirements=None,
+            use_computed_result=None
     ):
         url = self.ENDPOINT + "/task/create"
         params = self._map_parameters(
@@ -181,7 +163,8 @@ class AssemblyClient(APIClient):
                 "default_assignments": "DefaultAssignments",
                 "max_assignments": "MaxAssignments",
                 "sfn_token": "SFNToken",
-                "qualification_requirements": "QualificationRequirements"
+                "qualification_requirements": "QualificationRequirements",
+                "use_computed_result": "UseComputedResult"
             },
         )
         return self.post(url, data=params)["TaskId"]

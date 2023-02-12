@@ -22,6 +22,7 @@ TASK_DEFINITION_ARG_MAP = {
     "consolidation_handlers": "ConsolidationHandlers",
     "scoring_handler": "ScoringHandler",
     "callback_handlers": "CallbackHandlers",
+    "computed_result_handler": "ComputedResultHandler",
     "handler_code": "HandlerCode",
     "gold_answers": "GoldAnswers",
     "test_policy": "TestPolicy",

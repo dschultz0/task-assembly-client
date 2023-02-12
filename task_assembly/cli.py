@@ -63,10 +63,12 @@ class CLI:
         else:
             print(json.dumps(definition, indent=4))
 
-    def create_task(self, definition_file, assignments, sandbox, values, max_assignments, quals):
+    def create_task(self, definition_file, assignments, sandbox, values, max_assignments, quals,
+                    use_computed_result=False):
         definition = self.read_definition(definition_file)
         params = {
-            "definition_id": definition["DefinitionId"]
+            "definition_id": definition["DefinitionId"],
+            "use_computed_result": use_computed_result
         }
         if assignments:
             params["default_assignments"] = assignments
@@ -348,6 +350,7 @@ def main():
     ct_parser.add_argument("--definition_file", default="definition.json")
     ct_parser.add_argument("--max_assignments", type=int)
     ct_parser.add_argument("--quals", type=str)
+    ct_parser.add_argument("--use_computed_result", action="store_true")
     ct_parser.set_defaults(func=CLI.create_task)
 
     gt_parser = subparsers.add_parser("get_task")
