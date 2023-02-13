@@ -2,6 +2,8 @@ import json
 import os.path
 import posixpath
 from pathlib import Path
+from pkg_resources import resource_filename
+import shutil
 from datetime import datetime
 
 import larry as lry
@@ -25,6 +27,11 @@ class CLI:
             "csv": ",",
             "txt": "\t",
         }
+
+    def example(self):
+        files = ["batch.csv", "gold.json", "handlers.py", "template.html"]
+        for file in files:
+            shutil.copy(resource_filename(__name__, f"example/{file}"), os.getcwd())
 
     def create_task_type(self, name):
         task_type_id = self.client.create_task_type(name)
@@ -330,6 +337,9 @@ def main():
     c_parser.add_argument("--aws_profile")
     c_parser.add_argument("--validate", action="store_true")
 
+    ex_parser = subparsers.add_parser("example")
+    ex_parser.set_defaults(func=CLI.example)
+
     ctt_parser = subparsers.add_parser("create_task_type")
     ctt_parser.add_argument("name")
     ctt_parser.set_defaults(func=CLI.create_task_type)
@@ -491,6 +501,7 @@ def main():
         arg_dict = dict(args._get_kwargs())
         arg_dict.pop("func")
         arg_dict.pop("command")
+        arg_dict.pop("profile")
         args.func(cli, **arg_dict)
     else:
         raise Exception("Misformated command")
