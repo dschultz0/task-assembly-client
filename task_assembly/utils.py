@@ -4,6 +4,7 @@ from html import escape
 
 TASK_DEFINITION_ARG_MAP = {
     "definition_id": "DefinitionId",
+    "name": "Name",
     "task_type_id": "TaskType",
     "template": "Template",
     "title": "Title",
