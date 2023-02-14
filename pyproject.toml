@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "task-assembly"
-version = "0.1.10"
+version = "0.1.11"
 description = "SDK and CLI for using the Task Assembly crowdwork service"
 authors = ["Dave Schultz <dave@daveschultzconsulting.com>"]
 license = "MIT"
@@ -17,6 +17,7 @@ larry = "^0.2.12"
 boto3 = "^1.26.0"
 tabulate = "^0.9.0"
 toml = "^0.10.2"
+pyyaml = "^6.0"
 
 [build-system]
 requires = ["poetry-core"]

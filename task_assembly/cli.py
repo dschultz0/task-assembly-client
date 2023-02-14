@@ -9,6 +9,7 @@ from datetime import datetime
 import larry as lry
 import argparse
 import toml
+import yaml
 import csv
 
 from botocore.exceptions import ClientError
@@ -32,6 +33,16 @@ class CLI:
         files = ["batch.csv", "gold.json", "handlers.py", "template.html"]
         for file in files:
             shutil.copy(resource_filename(__name__, f"example/{file}"), os.getcwd())
+        print(f"The files {files} have been added to the current directory")
+
+    def migrate_yaml(self, definition_file="definition.json"):
+        base_name = os.path.splitext(definition_file)[0]
+        yaml_name = f"{base_name}.yaml"
+        with open(definition_file) as fp:
+            definition = json.load(fp)
+        with open(yaml_name, "w") as fp:
+            yaml.dump(definition, fp)
+        print(f"The file {definition_file} has been migrated to {yaml_name}, you may delete the original json file")
 
     def create_task_type(self, name):
         task_type_id = self.client.create_task_type(name)
@@ -40,9 +51,9 @@ class CLI:
     def create_task_definition(self, name, task_type_id):
         definition = self.client.create_task_definition(name, task_type_id)
         definition["TaskType"] = task_type_id
-        with open("definition.json", "w") as fp:
+        with open("definition.yaml", "w") as fp:
             json.dump(definition, fp, indent=4)
-        print(f"Created task definition {definition['DefinitionId']} in definition.json")
+        print(f"Created task definition {definition['DefinitionId']} in definition.yaml")
 
     def update_task_definition(self, definition_file):
         definition = self.read_definition(definition_file)
@@ -68,9 +79,9 @@ class CLI:
             definition.pop("GoldAnswers")
         if definition_file:
             with open(definition_file, "w") as fp:
-                json.dump(definition, fp, indent=4)
+                yaml.dump(definition, fp)
         else:
-            print(json.dumps(definition, indent=4))
+            print(yaml.dump(definition))
 
     def create_task(self, definition_file, assignments, sandbox, values, max_assignments, quals,
                     use_computed_result=False):
@@ -277,7 +288,7 @@ class CLI:
     @staticmethod
     def read_definition(file_name):
         with open(file_name, "r") as ffp:
-            definition_ = json.load(ffp)
+            definition_ = yaml.safe_load(ffp)
         return definition_
 
     def _write_output_file(self, results, output_file, field_order):
@@ -340,6 +351,10 @@ def main():
     ex_parser = subparsers.add_parser("example")
     ex_parser.set_defaults(func=CLI.example)
 
+    my_parser = subparsers.add_parser("migrate_yaml")
+    my_parser.add_argument("--definition_file", default="definition.json")
+    my_parser.set_defaults(func=CLI.migrate_yaml)
+
     ctt_parser = subparsers.add_parser("create_task_type")
     ctt_parser.add_argument("name")
     ctt_parser.set_defaults(func=CLI.create_task_type)
@@ -350,7 +365,7 @@ def main():
     ctd_parser.set_defaults(func=CLI.create_task_definition)
 
     utd_parser = subparsers.add_parser("update_task_definition")
-    utd_parser.add_argument("--definition_file", default="definition.json")
+    utd_parser.add_argument("--definition_file", default="definition.yaml")
     utd_parser.set_defaults(func=CLI.update_task_definition)
 
     gtd_parser = subparsers.add_parser("get_task_definition")
@@ -362,7 +377,7 @@ def main():
     ct_parser.add_argument("values", type=str, nargs="*")
     ct_parser.add_argument("--assignments", type=int)
     ct_parser.add_argument("--sandbox", action="store_true")
-    ct_parser.add_argument("--definition_file", default="definition.json")
+    ct_parser.add_argument("--definition_file", default="definition.yaml")
     ct_parser.add_argument("--max_assignments", type=int)
     ct_parser.add_argument("--quals", type=str)
     ct_parser.add_argument("--use_computed_result", action="store_true")
@@ -383,7 +398,7 @@ def main():
     rt_parser.set_defaults(func=CLI.redrive_task)
 
     sb_parser = subparsers.add_parser("submit_batch")
-    sb_parser.add_argument("--definition_file", default="definition.json")
+    sb_parser.add_argument("--definition_file", default="definition.yaml")
     sb_parser.add_argument("--sandbox", action="store_true")
     sb_parser.add_argument("--assignments", type=int)
     sb_parser.add_argument("name")
@@ -405,18 +420,18 @@ def main():
     gbr_parser.set_defaults(func=CLI.get_batch_results)
 
     lw_parser = subparsers.add_parser("list_workers")
-    lw_parser.add_argument("--definition_file", default="definition.json")
+    lw_parser.add_argument("--definition_file", default="definition.yaml")
     lw_parser.add_argument("output_file")
     lw_parser.set_defaults(func=CLI.list_workers)
 
     lb_parser = subparsers.add_parser("list_batches")
-    lb_parser.add_argument("--definition_file", default="definition.json")
+    lb_parser.add_argument("--definition_file", default="definition.yaml")
     lb_parser.add_argument("--all_definitions", action="store_true")
     lb_parser.add_argument("--output_file")
     lb_parser.set_defaults(func=CLI.list_batches)
 
     rds_parser = subparsers.add_parser("redrive_scoring")
-    rds_parser.add_argument("--definition_file", default="definition.json")
+    rds_parser.add_argument("--definition_file", default="definition.yaml")
     rds_parser.set_defaults(func=CLI.redrive_scoring)
 
     rb_parser = subparsers.add_parser("redrive_batch")
