@@ -52,19 +52,17 @@ our task attributes.
 Now we can update the `definition.json` file with the appropriate attributes for our task. We've included
 the core attributes for the example task below:
 
-```json
-{
-    "DefinitionId": "<your_definition_id>",
-    "TaskType": "<your_task_type_id>",
-    "Title": "Convert number to text",
-    "Description": "Write out a number as text",
-    "RewardCents": 10,
-    "Lifetime": 3600,
-    "AssignmentDuration": 300,
-    "DefaultAssignments": 2,
-    "MaxAssignments": 5,
-    "AutoApprovalDelay": 0
-}
+```yaml
+DefinitionId: <your_definition_id>
+TaskType: <your_task_type_id>
+Title: Convert number to text
+Description: Write out a number as text
+RewardCents: 10
+Lifetime: 3600
+AssignmentDuration: 300
+DefaultAssignments: 2
+MaxAssignments: 5
+AutoApprovalDelay: 0
 ```
 
 You can now run the following command to update the definition in Task Assembly:
@@ -78,10 +76,8 @@ templating language as Amazon SageMaker Ground Truth and the Amazon MTurk websit
 copy/paste existing task templates from those tools and update the variable names within the `{{ name }}` values.
 To apply this new task template to our definition, we can simply add a reference to it in our `definition.json` file:
 
-```json
-{
-  "TemplateFile": "template.html"
-}
+```yaml
+TemplateFile: template.html
 ```
 Then run the `update_task_defintion` command again.
 ```shell
@@ -194,11 +190,11 @@ If building the example application you'll find the handler code for this tutori
 function `process_response` simply retrieves the `numberAsText` form field and returns it. We can pull it into our 
 project adding the following to our `definition.json`:
 
-```json
-{
-  "HandlerFile": "handlers.py",
-  "SubmissionHandlers": [{"Name":  "value", "FunctionName":  "process_response"}]
-}
+```yaml
+HandlerFile: handlers.py
+SubmissionHandlers:
+- Name:  value
+  FunctionName:  process_response
 ```
 
 This tells Task Assembly to run the `process_response` on the form outputs and return it in an attribute name `value`.
@@ -237,12 +233,14 @@ for agreement between Workers. If two Workers agree, then we'll use that result.
 which will prompt Task Assembly to ask an additional Worker to provide a response, up to the `MaxAssignments`. To add
 this function to our task definition, we simply include the following in our `definition.json`.
 
-```json
-{
-  "HandlerFile": "handlers.py",
-  "SubmissionHandlers": [{"Name":  "value", "FunctionName":  "process_response"}],
-  "ConsolidationHandlers": [{"Name": "value", "FunctionName": "consolidate_result"}]
-}
+```yaml
+HandlerFile: handlers.py
+SubmissionHandlers:
+- Name:  value
+  FunctionName:  process_response
+ConsolidationHandlers: 
+- Name: value
+  FunctionName: consolidate_result
 ```
 
 Running `update_task_definition` and `redrive_task` will invoke this new consolidation logic, and we will now have a
@@ -296,15 +294,13 @@ they can begin working on the *real* tasks. Note that because it generally takes
 before scoring is complete so Workers will often be asked to do a third test if they quickly accept another
 task after completing their second test.
 
-```json
-{
-  "ScoringHandler": {"FunctionName": "score_response"},
-  "GoldAnswersFile": "gold.json",
-  "TestPolicy": {
-    "MinTests": 2,
-    "MinScore": 80
-  }
-}
+```yaml
+ScoringHandler: 
+  FunctionName: score_response
+GoldAnswersFile: gold.json
+TestPolicy:
+  MinTests: 2
+  MinScore: 80
 ```
 
 We can now create a new batch to begin using the new scoring that we've created. However, because scoring
