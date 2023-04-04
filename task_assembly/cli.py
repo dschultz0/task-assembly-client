@@ -337,6 +337,39 @@ class CLI:
             fieldnames.update(dict.fromkeys(result.keys()))
         return list(fieldnames.keys())
 
+
+def load_config(ta_config, profile) -> str:
+    if not ta_config.exists():
+        if os.path.exists("api-key.txt"):
+            with open("api-key.txt") as fp:
+                return fp.read().strip()
+        print("No configuration file found. Please run the 'configure' command first.")
+        exit(1)
+
+    with open(ta_config) as fp:
+        config = toml.load(fp)
+        profile_config = config.get(profile)
+    if not profile_config:
+        print(f"No configuration found for {profile} profile")
+        exit(1)
+    profile_credentials = profile_config["credentials"]
+    if profile_credentials.get("aws_profile"):
+        lry.set_session(profile_name=profile_credentials.get("aws_profile"))
+    api_key = None
+    if "api_key" in profile_credentials:
+        api_key = profile_credentials.get("api_key")
+    elif "api_key_secret" in profile_credentials:
+        sm = lry.session().client('secretsmanager')
+        response = sm.get_secret_value(SecretId=profile_credentials["api_key_secret"])
+        secret_value = response["SecretString"]
+        try:
+            secrets = json.loads(secret_value)
+            api_key = secrets["api_key"]
+        except:
+            api_key = secret_value
+    return api_key
+
+
 def main():
     parser = argparse.ArgumentParser("Task Assembly CLI")
     parser.add_argument("--profile")
@@ -473,31 +506,7 @@ def main():
         if not args.validate:
             exit(0)
 
-    if not ta_config.exists():
-        print("No configuration file found. Please run the 'configure' command first.")
-        exit(1)
-
-    with open(ta_config) as fp:
-        config = toml.load(fp)
-        profile_config = config.get(profile)
-    if not profile_config:
-        print(f"No configuration found for {profile} profile")
-        exit(1)
-    profile_credentials = profile_config["credentials"]
-    if profile_credentials.get("aws_profile"):
-        lry.set_session(profile_name=profile_credentials.get("aws_profile"))
-    api_key = None
-    if "api_key" in profile_credentials:
-        api_key = profile_credentials.get("api_key")
-    elif "api_key_secret" in profile_credentials:
-        sm = lry.session().client('secretsmanager')
-        response = sm.get_secret_value(SecretId=profile_credentials["api_key_secret"])
-        secret_value = response["SecretString"]
-        try:
-            secrets = json.loads(secret_value)
-            api_key = secrets["api_key"]
-        except:
-            api_key = secret_value
+    api_key = load_config(ta_config, profile)
 
     if api_key is None:
         print("Missing api key value")
