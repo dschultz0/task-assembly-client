@@ -20,6 +20,73 @@ def _arg_decorator(function):
     return inner
 
 
+class Task(dict):
+
+    def __init__(self, client: "AssemblyClient", value):
+        self.__client = client
+        super().__init__(value)
+
+    def __getitem__(self, item):
+        if item not in self:
+            if item == "Data":
+                self[item] = self.__client.get_task_input(self.task_id).get("Data")
+            elif item == "Responses":
+                self[item] = self.__client.get_task_responses(self.task_id).get("Responses")
+            elif item == "Result":
+                self[item] = self.__client.get_task_result(self.task_id).get("Result")
+        return super().__getitem__(item)
+
+    @property
+    def task_id(self):
+        return self["TaskId"]
+
+    @property
+    def extend_requested(self):
+        return self["ExtendRequested"]
+
+    @property
+    def state(self):
+        return self["State"]
+
+    @property
+    def errors(self):
+        return self["Errors"]
+
+    @property
+    def spend(self):
+        return self["Spend"]
+
+    @property
+    def spend_tuple(self):
+        s = self.spend
+        return (
+            s["TaskRewardCents"],
+            s["TaskFeeCents"],
+            s["TestRewardCents"],
+            s["TestFeeCents"],
+        )
+
+    @property
+    def qualification_requirements(self):
+        return self["QualificationRequirements"]
+
+    @property
+    def definition(self):
+        return self["Definition"]
+
+    @property
+    def input(self):
+        return self["Data"]
+
+    @property
+    def responses(self):
+        return self["Responses"]
+
+    @property
+    def result(self):
+        return self["Result"]
+
+
 class AssemblyClient(APIClient):
     # ENDPOINT = 'https://pr60r7m9gi.execute-api.us-west-2.amazonaws.com/Prod'
     ENDPOINT = "https://api.taskassembly.com"
@@ -271,19 +338,29 @@ class AssemblyClient(APIClient):
         )
         return self.post(url, data=params)
 
-    def get_task(self, task_id, include_assignments=False):
-        return self.get(
-            self.ENDPOINT + "/task/" + task_id,
-            {"includeAssignments": include_assignments},
-        )
+    def get_task(self, task_id, include_detail=False, include_assignments=False) -> Task:
+        if include_detail:
+            return Task(self, self.get(
+                self.ENDPOINT + "/task/detail/" + task_id,
+                {"includeAssignments": include_assignments},
+            ))
+        else:
+            return Task(self, self.get(self.ENDPOINT + "/task/" + task_id))
+
+    def get_task_input(self, task_id):
+        return self.get(self.ENDPOINT + "/task/input/" + task_id)
+
+    def get_task_result(self, task_id):
+        return self.get(self.ENDPOINT + "/task/result/" + task_id)
 
     def get_task_responses(self, task_id, include_excluded=False):
-        task = self.get_task(task_id, False)
-        return [
+        result = self.get(self.ENDPOINT + "/task/responses/" + task_id)
+        result["Responses"] = [
             {key: value for key, value in response.items() if key != "Excluded"}
-            for response in task.get("Responses", [])
+            for response in result.get("Responses", [])
             if not response.get("Excluded")
         ]
+        return result
 
     @_arg_decorator
     def create_task_type(self, name):

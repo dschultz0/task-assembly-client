@@ -108,7 +108,7 @@ class CLI:
         print(f"Task created: {task_id}")
 
     def get_task(self, task_id, include_assignments=False):
-        response = self.client.get_task(task_id, include_assignments)
+        response = self.client.get_task(task_id, True, include_assignments)
         print(json.dumps(response, indent=4))
 
     def stop_task(self, task_id):
