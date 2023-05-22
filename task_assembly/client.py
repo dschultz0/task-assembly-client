@@ -222,7 +222,8 @@ class AssemblyClient(APIClient):
             max_assignments=None,
             sfn_token=None,
             qualification_requirements=None,
-            use_computed_result=None
+            use_computed_result=None,
+            tag=None
     ):
         url = self.ENDPOINT + "/task/create"
         params = self._map_parameters(
