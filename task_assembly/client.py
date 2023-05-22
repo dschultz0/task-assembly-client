@@ -236,7 +236,8 @@ class AssemblyClient(APIClient):
                 "max_assignments": "MaxAssignments",
                 "sfn_token": "SFNToken",
                 "qualification_requirements": "QualificationRequirements",
-                "use_computed_result": "UseComputedResult"
+                "use_computed_result": "UseComputedResult",
+                "tag": "Tag"
             },
         )
         return self.post(url, data=params)["TaskId"]
