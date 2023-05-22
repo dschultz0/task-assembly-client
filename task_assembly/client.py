@@ -12,6 +12,10 @@ from .handlers import create_consolidation_lambda
 from .utils import display_iframe, TASK_DEFINITION_ARG_MAP
 
 
+# TODO: Fix this simplified approach for caching the client
+__client: "AssemblyClient" = None
+
+
 def _arg_decorator(function):
     def inner(*args, **kwargs):
         inner.actual_kwargs = kwargs
@@ -22,18 +26,14 @@ def _arg_decorator(function):
 
 class Task(dict):
 
-    def __init__(self, client: "AssemblyClient", value):
-        self.__client = client
-        super().__init__(value)
-
     def __getitem__(self, item):
         if item not in self:
             if item == "Data":
-                self[item] = self.__client.get_task_input(self.task_id).get("Data")
+                self[item] = __client.get_task_input(self.task_id).get("Data")
             elif item == "Responses":
-                self[item] = self.__client.get_task_responses(self.task_id).get("Responses")
+                self[item] = __client.get_task_responses(self.task_id).get("Responses")
             elif item == "Result":
-                self[item] = self.__client.get_task_result(self.task_id).get("Result")
+                self[item] = __client.get_task_result(self.task_id).get("Result")
         return super().__getitem__(item)
 
     @property
@@ -103,6 +103,7 @@ class AssemblyClient(APIClient):
             response_handler=JsonResponseHandler,
             request_formatter=JsonRequestFormatter,
         )
+        __client = self
 
     def get_request_timeout(self) -> float:
         """Extends the default timeout to 30 seconds for longer running actions"""
@@ -344,12 +345,12 @@ class AssemblyClient(APIClient):
 
     def get_task(self, task_id, include_detail=False, include_assignments=False) -> Task:
         if include_detail:
-            return Task(self, self.get(
+            return Task(self.get(
                 self.ENDPOINT + "/task/detail/" + task_id,
                 {"includeAssignments": include_assignments},
             ))
         else:
-            return Task(self, self.get(self.ENDPOINT + "/task/" + task_id))
+            return Task(self.get(self.ENDPOINT + "/task/" + task_id))
 
     def get_task_input(self, task_id):
         return self.get(self.ENDPOINT + "/task/input/" + task_id)
