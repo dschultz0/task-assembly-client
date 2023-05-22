@@ -38,41 +38,45 @@ class Task(dict):
 
     @property
     def task_id(self):
-        return self["TaskId"]
+        return self.get("TaskId")
 
     @property
     def extend_requested(self):
-        return self["ExtendRequested"]
+        return self.get("ExtendRequested")
 
     @property
     def state(self):
-        return self["State"]
+        return self.get("State")
 
     @property
     def errors(self):
-        return self["Errors"]
+        return self.get("Errors")
 
     @property
     def spend(self):
-        return self["Spend"]
+        return self.get("Spend")
 
     @property
     def spend_tuple(self):
+
         s = self.spend
-        return (
-            s["TaskRewardCents"],
-            s["TaskFeeCents"],
-            s["TestRewardCents"],
-            s["TestFeeCents"],
-        )
+        if s:
+            return (
+                s["TaskRewardCents"],
+                s["TaskFeeCents"],
+                s["TestRewardCents"],
+                s["TestFeeCents"],
+            )
+        else:
+            return (0, 0, 0, 0)
 
     @property
     def qualification_requirements(self):
-        return self["QualificationRequirements"]
+        return self.get("QualificationRequirements")
 
     @property
     def definition(self):
-        return self["Definition"]
+        return self.get("Definition")
 
     @property
     def input(self):

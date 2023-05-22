@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "task-assembly"
-version = "0.1.15"
+version = "0.1.16"
 description = "SDK and CLI for using the Task Assembly crowdwork service"
 authors = ["Dave Schultz <dave@daveschultzconsulting.com>"]
 license = "MIT"

@@ -1,1 +1,1 @@
-from .client import AssemblyClient
+from .client import AssemblyClient, Task
