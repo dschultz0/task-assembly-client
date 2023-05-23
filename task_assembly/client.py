@@ -13,7 +13,7 @@ from .utils import display_iframe, TASK_DEFINITION_ARG_MAP
 
 
 # TODO: Fix this simplified approach for caching the client
-__client: "AssemblyClient" = None
+_client: "AssemblyClient" = None
 
 
 def _arg_decorator(function):
@@ -27,13 +27,14 @@ def _arg_decorator(function):
 class Task(dict):
 
     def __getitem__(self, item):
+        global _client
         if item not in self:
             if item == "Data":
-                self[item] = __client.get_task_input(self.task_id).get("Data")
+                self[item] = _client.get_task_input(self.task_id).get("Data")
             elif item == "Responses":
-                self[item] = __client.get_task_responses(self.task_id).get("Responses")
+                self[item] = _client.get_task_responses(self.task_id).get("Responses")
             elif item == "Result":
-                self[item] = __client.get_task_result(self.task_id).get("Result")
+                self[item] = _client.get_task_result(self.task_id).get("Result")
         return super().__getitem__(item)
 
     @property
@@ -96,6 +97,7 @@ class AssemblyClient(APIClient):
     ENDPOINT = "https://api.taskassembly.com"
 
     def __init__(self, api_key):
+        global _client
         super().__init__(
             authentication_method=HeaderAuthentication(
                 token=api_key, parameter="x-api-key", scheme=None,
@@ -103,7 +105,7 @@ class AssemblyClient(APIClient):
             response_handler=JsonResponseHandler,
             request_formatter=JsonRequestFormatter,
         )
-        __client = self
+        _client = self
 
     def get_request_timeout(self) -> float:
         """Extends the default timeout to 30 seconds for longer running actions"""
