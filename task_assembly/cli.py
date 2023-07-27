@@ -58,6 +58,7 @@ class CLI:
     def update_task_definition(self, definition_file):
         definition = self.read_definition(definition_file)
         if "TemplateFile" in definition:
+            # TODO: Update to read UTF-8 and then warn on non-ASCII characters (or replace)
             with open(definition.pop("TemplateFile")) as fp:
                 definition["Template"] = fp.read()
         if "GoldAnswersFile" in definition:
@@ -197,7 +198,7 @@ class CLI:
                     lry.s3.download(output_file, response['OutputUri'])
                 elif ext == "json":
                     with open(output_file, "w") as fp:
-                        json.dump(results, fp)
+                        json.dump(results, fp, indent=4)
                 elif delimiter:
                     # TODO: Detect and handle inputs and outputs with the same key
                     fieldnames = dict.fromkeys(results[0]["Data"].keys())
@@ -224,9 +225,11 @@ class CLI:
         definition = self.read_definition(definition_file)
         response = self.client.list_workers(definition["DefinitionId"])
         with open(output_file, "w", newline="") as fp:
-            writer = csv.DictWriter(fp, fieldnames=["WorkerId", "Submitted", "ScoredCount", "Points"])
+            writer = csv.DictWriter(fp, fieldnames=["WorkerId", "Submitted", "ScoredCount", "Points", "Score"])
             writer.writeheader()
             for worker in response.get("Workers", []):
+                if worker.get("ScoredCount", 0) > 0 and worker.get("Points") is not None:
+                    worker["Score"] = round(worker["Points"]/worker["ScoredCount"], 1)
                 writer.writerow(worker)
 
     def list_batches(self, definition_file, output_file=None, all_definitions=False):
