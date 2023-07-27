@@ -221,6 +221,24 @@ class CLI:
             else:
                 raise e
 
+    def build_gold_from_batch(self, batch_id, output_file):
+        response = self.client.get_batch(batch_id)
+        try:
+            print(f"Retrieving results from: {response['OutputUri']}")
+            results = lry.s3.read_as([dict], response['OutputUri'])
+            if len(results) == 0:
+                print("No results yet")
+            else:
+                gold = [{k: v["value"] if k == 'Result' else v for k, v in r.items() if k in ["Data", "Result"]} for r in results]
+                with open(output_file, "w") as fp:
+                    json.dump(gold, fp, indent=4)
+
+        except ClientError as e:
+            if e.code == "404":
+                print("The output file not yet available")
+            else:
+                raise e
+
     def list_workers(self, definition_file, output_file):
         definition = self.read_definition(definition_file)
         response = self.client.list_workers(definition["DefinitionId"])
@@ -454,6 +472,11 @@ def main():
     gbr_parser.add_argument("batch_id")
     gbr_parser.add_argument("output_file")
     gbr_parser.set_defaults(func=CLI.get_batch_results)
+
+    gbr_parser = subparsers.add_parser("build_gold_from_batch")
+    gbr_parser.add_argument("batch_id")
+    gbr_parser.add_argument("--output_file", default="gold.json")
+    gbr_parser.set_defaults(func=CLI.build_gold_from_batch)
 
     lw_parser = subparsers.add_parser("list_workers")
     lw_parser.add_argument("--definition_file", default="definition.yaml")

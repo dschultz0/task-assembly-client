@@ -326,3 +326,43 @@ decline.
 To see how Workers did on your tests and their relative contribution to the final output, run
 `task_assembly list_workers workers.csv` to generate a report on how many responses
 each Worker has provided for this task definition and their scores on the test tasks.
+
+### Additional test options
+There are two additional policy options you can use to better control how tests are assigned, 
+`ConsumeAssignments` and `MinTestPercentage`.
+
+The `ConsumeAssignments` flag can be set to modify how Task Assembly decides to assign tasks to Workers.
+By default, Task Assembly will assign the *real* task to a Worker who hasn't completed all of their tests 
+yet if there aren't enough available Assignments to meet the requested `DefaultAssignments`. For example,
+if we have `DefaultAssignments` of 2 and 7 Workers have already completed tests using this HIT, then 
+TaskAssembly will ensure we get a result, regardless of whether they have completed any tests. *MTurk 
+will not allow a HIT to have more than 9 Assignments if it starts with less than 10.*
+
+By setting `ConsumeAssignments` to true, we let TaskAssembly know that it should enforce the test policy,
+regardless of available Assignments.
+
+```yaml
+TestPolicy:
+  ConsumeAssignments: true
+  MinTests: 2
+  MinScore: 80
+  MinTestPercentage: 3
+```
+
+The `MinTestPercentage` tells Task Assembly to continually test Workers to ensure that their work continues 
+to be of good quality. In this case, setting the value to *3* tells Task Assembly that 3% of a Worker's tasks
+should be tests.
+
+### Building *gold* data
+A good practice for building a set of gold data you can use for testing is to do the work yourself in the 
+MTurk Sandbox and then using your test responses as gold. To start simply create a test batch using a sample
+of your input data.
+
+```shell
+task-assembly submit_batch numbers_sample sample_data.csv s3://taskassembly-test/batches --sandbox --assignments 1
+```
+
+You can now complete this batch in the MTurk Worker Sandbox (https://workersandbox.mturk.com/). When the work
+is complete you can run the following command to generate a gold.json file containing a formatted gold set
+based on your responses.
+
