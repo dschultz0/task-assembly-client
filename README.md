@@ -366,3 +366,6 @@ You can now complete this batch in the MTurk Worker Sandbox (https://workersandb
 is complete you can run the following command to generate a gold.json file containing a formatted gold set
 based on your responses.
 
+```shell
+task-assembly build_gold_from_batch <batch-id>
+```
