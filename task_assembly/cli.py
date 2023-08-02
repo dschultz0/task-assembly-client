@@ -52,7 +52,7 @@ class CLI:
         definition = self.client.create_task_definition(name, task_type_id)
         definition["TaskType"] = task_type_id
         with open("definition.yaml", "w") as fp:
-            json.dump(definition, fp, indent=4)
+            yaml.dump(definition, fp)
         print(f"Created task definition {definition['DefinitionId']} in definition.yaml")
 
     def update_task_definition(self, definition_file):
