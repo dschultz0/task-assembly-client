@@ -409,6 +409,48 @@ class AssemblyClient(APIClient):
         return self.get(f"{self.ENDPOINT}/batch/list", params)
 
     @_arg_decorator
+    def list_assignments(
+            self,
+            definition_id,
+            worker_id=None,
+            test_index: int = None,
+            max_results: int = None,
+            start_key=None,
+            include_detail: bool = None):
+        params = self._map_parameters(
+            locals(),
+            self.list_assignments.actual_kwargs,
+            {
+                "definition_id": "TaskDefinitionId",
+                "worker_id": "WorkerId",
+                "test_index": "TestIndex",
+                "max_results": "MaxResults",
+                "start_key": "StartKey",
+                "include_detail": "IncludeTaskDetail"
+            },
+        )
+        return self.get(f"{self.ENDPOINT}/assignments", params)
+
+    def iter_assignments(
+            self,
+            definition_id,
+            worker_id=None,
+            test_index: int = None,
+            max_results: int = None,
+            include_detail: bool = None):
+        start_key = None
+        complete = False
+        while not complete:
+            response = self.list_assignments(
+                definition_id, worker_id, test_index, max_results, start_key, include_detail
+            )
+            start_key = response.get("NextKey")
+            if not start_key:
+                complete = True
+            for assignment in response.get("Assignments"):
+                yield assignment
+
+    @_arg_decorator
     def exclude_worker(self, worker_id, reverse=False):
         url = self.ENDPOINT + "/worker/exclude"
         params = self._map_parameters(
