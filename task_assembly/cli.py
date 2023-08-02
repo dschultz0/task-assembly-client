@@ -250,6 +250,35 @@ class CLI:
                     worker["Score"] = round(worker["Points"]/worker["ScoredCount"], 1)
                 writer.writerow(worker)
 
+    def close_testing(self, definition_file, min_score=None):
+        definition = self.read_definition(definition_file)
+        response = self.client.list_workers(definition["DefinitionId"])
+        min_score = min_score if min_score else definition["TestPolicy"]["MinScore"]
+        min_tests = definition["TestPolicy"]["MinTests"]
+        workers = [w for w in response.get("Workers", [])
+                   if w.get("ScoredCount", 0) >= min_tests
+                   and w.get("Points") is not None
+                   and w["Points"]/w["ScoredCount"] >= min_score]
+        print(f"Creating qualification for {len(workers)} workers")
+        qualification_id = lry.mturk.create_qualification_type(
+            f"Good {definition['DefinitionId']}",
+            f"Good {definition['DefinitionId']}"
+        )
+        print(f"Assigning workers to qualification {qualification_id}")
+        for w in workers:
+            lry.mturk.assign_qualification(qualification_id, w["WorkerId"], 1)
+        print(f"Adding qualification to definition")
+        reqs = definition.get("QualificationRequirements", [])
+        reqs.append({
+            "ActionsGuarded": "DiscoverPreviewAndAccept",
+            "Comparator": "Exists",
+            "QualificationTypeId": qualification_id
+        })
+        definition["QualificationRequirements"] = reqs
+        with open(definition_file, "w") as fp:
+            yaml.dump(definition, fp)
+        self.update_task_definition(definition_file)
+
     def list_batches(self, definition_file, output_file=None, all_definitions=False):
         params = {}
         if not all_definitions:
@@ -482,6 +511,11 @@ def main():
     lw_parser.add_argument("--definition_file", default="definition.yaml")
     lw_parser.add_argument("output_file")
     lw_parser.set_defaults(func=CLI.list_workers)
+
+    clt_parser = subparsers.add_parser("close_testing")
+    clt_parser.add_argument("--definition_file", default="definition.yaml")
+    clt_parser.add_argument("--min_score", type=int)
+    clt_parser.set_defaults(func=CLI.close_testing)
 
     lb_parser = subparsers.add_parser("list_batches")
     lb_parser.add_argument("--definition_file", default="definition.yaml")
