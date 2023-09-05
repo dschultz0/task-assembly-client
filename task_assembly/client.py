@@ -406,6 +406,25 @@ class AssemblyClient(APIClient):
             for w in response.get("Workers", []):
                 yield w
 
+    def list_tasks(self, task_definition_id=None, tag=None, tag_value=None, batch_id=None):
+        ops = [task_definition_id, tag, batch_id]
+        params = {}
+        if task_definition_id:
+            params["TaskDefinitionId"] = task_definition_id
+        if tag and tag_value:
+            params["Tag"] = tag
+            params["TagValue"] = tag_value
+        if batch_id:
+            params["BatchId"] = batch_id
+        start_key = "start"
+        while start_key:
+            if start_key != "start":
+                params["StartKey"] = start_key
+            response = self.get(f"{self.ENDPOINT}/tasks", params)
+            start_key = response.get("NextKey")
+            for t in response.get("Tasks", []):
+                yield t
+
     def list_batches(self, definition_id=None, max_results=None, start_key=None):
         params = {}
         if definition_id:

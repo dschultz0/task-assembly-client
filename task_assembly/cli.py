@@ -252,6 +252,47 @@ class CLI:
                     worker["Score"] = round(worker["Points"]/worker["ScoredCount"], 1)
                 writer.writerow(worker)
 
+    def list_tasks(self,
+                   output_file,
+                   definition_file=None,
+                   tag: list[str] = None,
+                   batch_id=None,
+                   task_definition_id=None,
+                   max_results=None):
+        def_id = None
+        if os.path.exists(definition_file):
+            def_id = task_definition_id if task_definition_id else self.read_definition(definition_file)["DefinitionId"]
+        if tag:
+            tasks = self.client.list_tasks(tag=tag[0], tag_value=tag[1], task_definition_id=def_id)
+        elif batch_id:
+            tasks = self.client.list_tasks(batch_id=batch_id)
+        elif def_id:
+            tasks = self.client.list_tasks(task_definition_id=def_id)
+        else:
+            print("missing task_definition_id, batch_id or tag")
+            sys.exit(-1)
+        if max_results:
+            tasks = itertools.islice(tasks, max_results)
+        with open(output_file, "w", newline="", encoding="utf-8") as fp:
+            writer = csv.DictWriter(fp, fieldnames=['TaskId', 'ResponseCount',
+                        'State', 'Stats', 'Definition', 'Errors', 'Batch', 'ExtendRequested','IncompleteDetail',
+                        'QualificationRequirements', 'TaskFeeCents', 'TestRewardCents', 'TaskRewardCents',
+                        'TestFeeCents', 'UseComputedResult', 'TestResponseCount', 'Tag',])
+            # Data	HITs	Assignments	Result	Sandbox	Responses
+            writer.writeheader()
+            for task in tasks:
+                task.pop("Data", None)
+                task.pop("HITs", None)
+                task.pop("Assignments", None)
+                task.pop("Result", None)
+                task.pop("Responses", None)
+                task.pop("Stats", None)
+                spend = task.pop("Spend", None)
+                if spend:
+                    for k, v in spend.items():
+                        task[k] = v
+                writer.writerow(task)
+
     def close_testing(self, definition_file, min_score=None):
         definition = self.read_definition(definition_file)
         response = self.client.list_workers(definition["DefinitionId"])
@@ -514,6 +555,15 @@ def main():
     lw_parser.add_argument("--definition_file", default="definition.yaml")
     lw_parser.add_argument("output_file")
     lw_parser.set_defaults(func=CLI.list_workers)
+
+    lt_parser = subparsers.add_parser("list_tasks")
+    lt_parser.add_argument("--definition_file", default="definition.yaml")
+    lt_parser.add_argument("output_file")
+    lt_parser.add_argument("--tag", nargs=2)
+    lt_parser.add_argument("--batch_id")
+    lt_parser.add_argument("--task_definition_id")
+    lt_parser.add_argument("--max_results", type=int)
+    lt_parser.set_defaults(func=CLI.list_tasks)
 
     clt_parser = subparsers.add_parser("close_testing")
     clt_parser.add_argument("--definition_file", default="definition.yaml")
