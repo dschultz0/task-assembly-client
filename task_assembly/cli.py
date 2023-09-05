@@ -84,7 +84,7 @@ class CLI:
         else:
             print(yaml.dump(definition))
 
-    def create_task(self, definition_file, assignments, sandbox, values, max_assignments, quals,
+    def create_task(self, definition_file, assignments, sandbox, values, max_assignments, quals, tags,
                     use_computed_result=False):
         definition = self.read_definition(definition_file)
         params = {
@@ -105,6 +105,8 @@ class CLI:
             params["data"] = {vals[0]: vals[1]}
         if quals:
             params["qualification_requirements"] = json.loads(quals)
+        if tags:
+            params["tags"] = dict(tags)
         task_id = self.client.create_task(**params)
         print(f"Task created: {task_id}")
 
@@ -464,6 +466,7 @@ def main():
     ct_parser.add_argument("--max_assignments", type=int)
     ct_parser.add_argument("--quals", type=str)
     ct_parser.add_argument("--use_computed_result", action="store_true")
+    ct_parser.add_argument("--tag", dest="tags", nargs=2, action="append")
     ct_parser.set_defaults(func=CLI.create_task)
 
     gt_parser = subparsers.add_parser("get_task")

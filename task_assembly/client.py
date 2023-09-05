@@ -225,7 +225,7 @@ class AssemblyClient(APIClient):
             sfn_token=None,
             qualification_requirements=None,
             use_computed_result=None,
-            tag=None
+            tags: dict[str, str]=None
     ):
         url = self.ENDPOINT + "/task/create"
         params = self._map_parameters(
@@ -240,7 +240,7 @@ class AssemblyClient(APIClient):
                 "sfn_token": "SFNToken",
                 "qualification_requirements": "QualificationRequirements",
                 "use_computed_result": "UseComputedResult",
-                "tag": "Tag"
+                "tags": "Tags"
             },
         )
         return self.post(url, data=params)["TaskId"]
