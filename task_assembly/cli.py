@@ -86,6 +86,12 @@ class CLI:
         else:
             print(yaml.dump(definition))
 
+    def get_task_definition_gold(self, id):
+        definition = self.client.get_task_definition(id)
+        if "GoldAnswers" in definition:
+            with open("gold.json", "w") as fp:
+                json.dump(definition["GoldAnswers"], fp, indent=4)
+
     def create_task(self, definition_file, assignments, sandbox, values, max_assignments, quals, tags,
                     use_computed_result=False):
         definition = self.read_definition(definition_file)
@@ -500,6 +506,10 @@ def main():
     gtd_parser.add_argument("id")
     gtd_parser.add_argument("--definition_file")
     gtd_parser.set_defaults(func=CLI.get_task_definition)
+
+    gtdg_parser = subparsers.add_parser("get_task_definition_gold")
+    gtdg_parser.add_argument("id")
+    gtdg_parser.set_defaults(func=CLI.get_task_definition_gold)
 
     ct_parser = subparsers.add_parser("create_task")
     ct_parser.add_argument("values", type=str, nargs="*")
