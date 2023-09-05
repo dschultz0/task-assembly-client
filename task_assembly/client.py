@@ -396,7 +396,15 @@ class AssemblyClient(APIClient):
         return self.get(self.ENDPOINT + "/worker/stats/" + worker_id)
 
     def list_workers(self, definition_id):
-        return self.get(f"{self.ENDPOINT}/taskDefinition/{definition_id}/workers")
+        start_key = "start"
+        while start_key:
+            params = {}
+            if start_key != "start":
+                params["StartKey"] = start_key
+            response = self.get(f"{self.ENDPOINT}/taskDefinition/{definition_id}/workers", params)
+            start_key = response.get("NextKey")
+            for w in response.get("Workers", []):
+                yield w
 
     def list_batches(self, definition_id=None, max_results=None, start_key=None):
         params = {}
