@@ -245,11 +245,11 @@ class CLI:
 
     def list_workers(self, definition_file, output_file):
         definition = self.read_definition(definition_file)
-        response = self.client.list_workers(definition["DefinitionId"])
+        workers = self.client.list_workers(definition["DefinitionId"])
         with open(output_file, "w", newline="") as fp:
             writer = csv.DictWriter(fp, fieldnames=["WorkerId", "Submitted", "ScoredCount", "Points", "Score"])
             writer.writeheader()
-            for worker in response.get("Workers", []):
+            for worker in workers:
                 if worker.get("ScoredCount", 0) > 0 and worker.get("Points") is not None:
                     worker["Score"] = round(worker["Points"]/worker["ScoredCount"], 1)
                 writer.writerow(worker)
