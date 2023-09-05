@@ -303,10 +303,10 @@ class CLI:
 
     def close_testing(self, definition_file, min_score=None):
         definition = self.read_definition(definition_file)
-        response = self.client.list_workers(definition["DefinitionId"])
+        workers = self.client.list_workers(definition["DefinitionId"])
         min_score = min_score if min_score else definition["TestPolicy"]["MinScore"]
         min_tests = definition["TestPolicy"]["MinTests"]
-        workers = [w for w in response.get("Workers", [])
+        workers = [w for w in workers
                    if w.get("ScoredCount", 0) >= min_tests
                    and w.get("Points") is not None
                    and w["Points"]/w["ScoredCount"] >= min_score]
@@ -316,10 +316,20 @@ class CLI:
             f"Good {definition['DefinitionId']}"
         )
         print(f"Assigning workers to qualification {qualification_id}")
+        failures = []
         for w in workers:
-            lry.mturk.assign_qualification(qualification_id, w["WorkerId"], 1)
+            try:
+                lry.mturk.assign_qualification(qualification_id, w["WorkerId"], 1)
+            except ClientError:
+                failures.append(w["WorkerId"])
+        if failures:
+            print(f"Failed to add the following {len(failures)} workers to the qualification:")
+            for w in failures:
+                print(w)
         print(f"Adding qualification to definition")
         reqs = definition.get("QualificationRequirements", [])
+        if reqs is None:
+            reqs = []
         reqs.append({
             "ActionsGuarded": "DiscoverPreviewAndAccept",
             "Comparator": "Exists",
