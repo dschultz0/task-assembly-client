@@ -1,6 +1,8 @@
+import itertools
 import json
 import os.path
 import posixpath
+import sys
 from pathlib import Path
 from pkg_resources import resource_filename
 import shutil
