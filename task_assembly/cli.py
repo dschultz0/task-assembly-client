@@ -399,6 +399,19 @@ class CLI:
     def resolve_batch(self, batch_id, extend):
         self.client.resolve_batch(batch_id, extend)
 
+    def render_template(self, definition_file, gold_index=0):
+        definition = self.read_definition(definition_file)
+        gold_file = definition.get("GoldAnswersFile")
+        if not gold_file:
+            print("No GoldAnswersFile specified in the task definition")
+            sys.exit(-1)
+        with open(gold_file) as fp:
+            gold = json.load(fp)
+        data = gold[gold_index]["Data"]
+        rendered = self.client.render_task(definition["DefinitionId"], data)
+        with open("template_rendered.html", "w") as fp:
+            fp.write(rendered)
+
     @staticmethod
     def read_definition(file_name):
         with open(file_name, "r") as ffp:
@@ -614,6 +627,11 @@ def main():
     rsb_parser.add_argument("batch_id")
     rsb_parser.add_argument("--extend", action="store_true")
     rsb_parser.set_defaults(func=CLI.resolve_batch)
+
+    render_parser = subparsers.add_parser("render_template")
+    render_parser.add_argument("--definition_file", default="definition.yaml")
+    render_parser.add_argument("--gold_index", type=int, default=0)
+    render_parser.set_defaults(func=CLI.render_template)
 
     args = parser.parse_args()
 
