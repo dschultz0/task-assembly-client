@@ -281,24 +281,27 @@ class CLI:
             sys.exit(-1)
         if max_results:
             tasks = itertools.islice(tasks, max_results)
+        tasks = list(tasks)
+        field_names = ['TaskId', 'ResponseCount', 'State', 'Stats', 'Definition', 'Errors',
+                       'Batch', 'ExtendRequested','IncompleteDetail', 'QualificationRequirements',
+                       'UseComputedResult', 'TestResponseCount']
+        additional_keys = set()
+        for t in tasks:
+            for k, v in list(t.items()):
+                if isinstance(v, dict):
+                    for kk, vv in v.items():
+                        key = f"{k}.{kk}"
+                        t[key] = vv
+                        additional_keys.add(key)
+                    del t[k]
+                if k in ["Data", "HITs", "Assignments", "Result", "Responses", "Stats"]:
+                    del t[k]
+        field_names.extend(sorted(list(additional_keys)))
         with open(output_file, "w", newline="", encoding="utf-8") as fp:
-            writer = csv.DictWriter(fp, fieldnames=['TaskId', 'ResponseCount',
-                        'State', 'Stats', 'Definition', 'Errors', 'Batch', 'ExtendRequested','IncompleteDetail',
-                        'QualificationRequirements', 'TaskFeeCents', 'TestRewardCents', 'TaskRewardCents',
-                        'TestFeeCents', 'UseComputedResult', 'TestResponseCount', 'Tag',])
+            writer = csv.DictWriter(fp, fieldnames=field_names)
             # Data	HITs	Assignments	Result	Sandbox	Responses
             writer.writeheader()
             for task in tasks:
-                task.pop("Data", None)
-                task.pop("HITs", None)
-                task.pop("Assignments", None)
-                task.pop("Result", None)
-                task.pop("Responses", None)
-                task.pop("Stats", None)
-                spend = task.pop("Spend", None)
-                if spend:
-                    for k, v in spend.items():
-                        task[k] = v
                 writer.writerow(task)
 
     def close_testing(self, definition_file, min_score=None):
