@@ -505,12 +505,12 @@ class AssemblyClient(APIClient):
         self.post(url, data=params)
 
     @_arg_decorator
-    def redrive_scoring(self, definition_id):
+    def redrive_scoring(self, definition_id, redrive_submissions=False):
         url = self.ENDPOINT + "/taskDefinition/redriveScoring"
         params = self._map_parameters(
             locals(),
             self.redrive_scoring.actual_kwargs,
-            {"definition_id": "DefinitionId"},
+            {"definition_id": "DefinitionId", "redrive_submissions": "RedriveSubmissions"},
         )
         self.post(url, data=params)
 

@@ -386,9 +386,9 @@ class CLI:
                 table.append(row)
             print(tabulate(table, headers=list(fields.values())))
 
-    def redrive_scoring(self, definition_file):
+    def redrive_scoring(self, definition_file, redrive_submissions=False):
         definition = self.read_definition(definition_file)
-        self.client.redrive_scoring(definition["DefinitionId"])
+        self.client.redrive_scoring(definition["DefinitionId"], redrive_submissions)
 
     def stop_batch(self, batch_id):
         self.client.expire_batch(batch_id)
@@ -616,6 +616,7 @@ def main():
 
     rds_parser = subparsers.add_parser("redrive_scoring")
     rds_parser.add_argument("--definition_file", default="definition.yaml")
+    rds_parser.add_argument("--redrive_submissions", action="store_true")
     rds_parser.set_defaults(func=CLI.redrive_scoring)
 
     rb_parser = subparsers.add_parser("redrive_batch")
