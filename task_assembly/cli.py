@@ -7,6 +7,7 @@ from pathlib import Path
 from pkg_resources import resource_filename
 import shutil
 from datetime import datetime
+import typing
 
 import larry as lry
 import argparse
@@ -263,7 +264,7 @@ class CLI:
     def list_tasks(self,
                    output_file,
                    definition_file=None,
-                   tag: list[str] = None,
+                   tag: typing.List[str] = None,
                    batch_id=None,
                    task_definition_id=None,
                    max_results=None):

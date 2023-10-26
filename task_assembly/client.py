@@ -7,7 +7,7 @@ from apiclient import (
     JsonRequestFormatter,
 )
 from urllib.parse import urlencode
-
+import typing
 from .handlers import create_consolidation_lambda
 from .utils import display_iframe, TASK_DEFINITION_ARG_MAP
 
@@ -225,7 +225,7 @@ class AssemblyClient(APIClient):
             sfn_token=None,
             qualification_requirements=None,
             use_computed_result=None,
-            tags: dict[str, str]=None
+            tags: typing.Dict[str, str]=None
     ):
         url = self.ENDPOINT + "/task/create"
         params = self._map_parameters(
