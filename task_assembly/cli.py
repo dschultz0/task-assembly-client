@@ -8,6 +8,7 @@ from pkg_resources import resource_filename
 import shutil
 from datetime import datetime
 import typing
+from collections import defaultdict
 
 import larry as lry
 import argparse
@@ -305,6 +306,57 @@ class CLI:
             for task in tasks:
                 writer.writerow(task)
 
+    def list_assignments(self,
+                         output_file: str,
+                         definition_file=None,
+                         definition_id=None,
+                         worker_id=None,
+                         test_index=None,
+                         max_results=None):
+        def_id = self.get_definition_id(definition_file, definition_id)
+        if def_id is None:
+            print("Missing definition id or file")
+            sys.exit(-1)
+        assignments = self.client.iter_assignments(def_id, worker_id=worker_id, test_index=test_index)
+        if max_results:
+            assignments = itertools.islice(assignments, max_results)
+        assignments = list(assignments)
+        if output_file.endswith(".jsonl"):
+            with open(output_file, "w", encoding="utf-8") as fp:
+                fp.writelines([json.dumps(a) + "\n" for a in assignments])
+        else:
+            field_order = ['TaskId', 'AssignmentId', 'WorkerId', 'Accepted', 'Submitted', 'Answer', 'Result', 'TestData', 'Score']
+            field_map = defaultdict(set)
+            compound_fields = ['Answer', 'TestData']
+            # excluded_fields = ['Id', 'Excluded']
+            records = []
+            for a in assignments:
+                record = {}
+                for f in field_order:
+                    if f in a:
+                        value = a[f]
+                        if f in compound_fields and isinstance(value, dict):
+                            for k, v in value.items():
+                                key = f"{f}.{k}"
+                                record[key] = v
+                                field_map[f].add(key)
+                        elif f == "Result" and isinstance(value, dict):
+                            base_key = list(value.keys())[0]
+                            for k, v in value[base_key].items():
+                                key = f"{f}.{base_key}.{k}"
+                                record[key] = v
+                                field_map[f].add(key)
+                        else:
+                            record[f] = value
+                            field_map[f].add(f)
+                records.append(record)
+            field_names = [f for fs in field_map.values() for f in fs]
+            with open(output_file, "w", newline="", encoding="utf-8") as fp:
+                writer = csv.DictWriter(fp, fieldnames=field_names)
+                writer.writeheader()
+                for r in records:
+                    writer.writerow(r)
+
     def close_testing(self, definition_file, min_score=None):
         definition = self.read_definition(definition_file)
         workers = self.client.list_workers(definition["DefinitionId"])
@@ -418,6 +470,15 @@ class CLI:
         with open(file_name, "r") as ffp:
             definition_ = yaml.safe_load(ffp)
         return definition_
+
+    @staticmethod
+    def get_definition_id(file_name, definition_id=None):
+        if definition_id:
+            return definition_id
+        elif os.path.exists(file_name):
+            return CLI.read_definition(file_name)["DefinitionId"]
+        else:
+            raise None
 
     def _write_output_file(self, results, output_file, field_order):
         ext = os.path.splitext(output_file)[1][1:].lower()
@@ -603,6 +664,15 @@ def main():
     lt_parser.add_argument("--task_definition_id")
     lt_parser.add_argument("--max_results", type=int)
     lt_parser.set_defaults(func=CLI.list_tasks)
+
+    la_parser = subparsers.add_parser("list_assignments")
+    la_parser.add_argument("--definition_file", default="definition.yaml")
+    la_parser.add_argument("--definition_id")
+    la_parser.add_argument("output_file")
+    la_parser.add_argument("--worker_id")
+    la_parser.add_argument("--test_index", type=int)
+    la_parser.add_argument("--max_results", type=int)
+    la_parser.set_defaults(func=CLI.list_assignments)
 
     clt_parser = subparsers.add_parser("close_testing")
     clt_parser.add_argument("--definition_file", default="definition.yaml")
