@@ -135,11 +135,15 @@ class CLI:
         definition = self.read_definition(definition_file)
         name = name.replace(" ", "_")
         extension = os.path.splitext(input_file)[1][1:].lower()
-        delimiter = self.delimiter_map.get(extension)
-        if not delimiter:
-            raise Exception("Input file must have an extension of csv, tsv, or txt")
-        with open(input_file, encoding="utf-8-sig") as fp:
-            lines = list(csv.DictReader(fp, delimiter=delimiter))
+        if extension == "jsonl":
+            with open(input_file, encoding="utf-8-sig") as fp:
+                lines = [json.loads(line) for line in fp]
+        else:
+            delimiter = self.delimiter_map.get(extension)
+            if not delimiter:
+                raise Exception("Input file must have an extension of jsonl, csv, tsv, or txt")
+            with open(input_file, encoding="utf-8-sig") as fp:
+                lines = list(csv.DictReader(fp, delimiter=delimiter))
         input_uri = posixpath.join(s3_uri_prefix, f"{name}.jsonl")
         output_uri = posixpath.join(s3_uri_prefix, f"{name}_output.jsonl")
         lry.s3.write_as(lines, [dict], input_uri)
@@ -467,6 +471,9 @@ class CLI:
         with open("template_rendered.html", "w") as fp:
             fp.write(rendered)
 
+    def gather_test_statistics(self, definition_file, output_file):
+        print("UNDER DEVELOPMENT...")
+
     @staticmethod
     def read_definition(file_name):
         with open(file_name, "r") as ffp:
@@ -707,6 +714,11 @@ def main():
     render_parser.add_argument("--definition_file", default="definition.yaml")
     render_parser.add_argument("--gold_index", type=int, default=0)
     render_parser.set_defaults(func=CLI.render_template)
+
+    gts_parser = subparsers.add_parser("gather_test_statistics")
+    gts_parser.add_argument("--definition_file", default="definition.yaml")
+    gts_parser.add_argument("--output_file", default="test_statistics.csv")
+    gts_parser.set_defaults(func=CLI.gather_test_statistics)
 
     args = parser.parse_args()
 
