@@ -131,7 +131,7 @@ class CLI:
         response = self.client.redrive_task(task_id, extend=extend)
         print(json.dumps(response, indent=4))
 
-    def submit_batch(self, definition_file, name, input_file, s3_uri_prefix, sandbox=False, assignments=None):
+    def submit_batch(self, definition_file, name, input_file, s3_uri_prefix, sandbox=False, assignments=None, quals=None):
         definition = self.read_definition(definition_file)
         name = name.replace(" ", "_")
         extension = os.path.splitext(input_file)[1][1:].lower()
@@ -153,6 +153,8 @@ class CLI:
             params["sandbox"] = True
         if assignments:
             params["default_assignments"] = assignments
+        if quals:
+            params["qualification_requirements"] = json.loads(quals)
         batch_id = self.client.submit_batch(**params)
         print(f"A batch with id {batch_id} has been created")
         print(f"Results will be written to {output_uri}")
@@ -628,6 +630,7 @@ def main():
     sb_parser.add_argument("--definition_file", default="definition.yaml")
     sb_parser.add_argument("--sandbox", action="store_true")
     sb_parser.add_argument("--assignments", type=int)
+    sb_parser.add_argument("--quals", type=str)
     sb_parser.add_argument("name")
     sb_parser.add_argument("input_file")
     sb_parser.add_argument("s3_uri_prefix")

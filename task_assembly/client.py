@@ -286,6 +286,7 @@ class AssemblyClient(APIClient):
             sandbox=False,
             default_assignments=None,
             max_assignments=None,
+            qualification_requirements=None
     ):
         url = self.ENDPOINT + "/batch/submit"
         params = self._map_parameters(
@@ -299,6 +300,7 @@ class AssemblyClient(APIClient):
                 "sandbox": "Sandbox",
                 "default_assignments": "DefaultAssignments",
                 "max_assignments": "MaxAssignments",
+                "qualification_requirements": "QualificationRequirements"
             },
         )
         return self.post(url, data=params)["BatchId"]
