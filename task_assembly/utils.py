@@ -2,6 +2,12 @@ import uuid
 import warnings
 from html import escape
 
+BATCH_DEFINITION_ARG_MAP = {
+    "definition": "definition",
+    "blueprint_id": "blueprintId",
+    "render_handler_arn": "renderHandlerArn",
+}
+
 BLUEPRINT_DEFINITION_ARG_MAP = {
     "name": "name",
     "task_template": "taskTemplate",

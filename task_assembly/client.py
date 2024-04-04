@@ -3,7 +3,7 @@ from apiclient import (
     JsonResponseHandler,
     JsonRequestFormatter,
 )
-from .utils import BLUEPRINT_DEFINITION_ARG_MAP
+from .utils import BLUEPRINT_DEFINITION_ARG_MAP, BATCH_DEFINITION_ARG_MAP
 
 # TODO: Fix this simplified approach for caching the client
 _client: "AssemblyClient" = None
@@ -45,6 +45,21 @@ class AssemblyClient(APIClient):
         
         return result
 
+    @_arg_decorator
+    def create_batch(
+            self,
+            definition=None,
+            render_handler_arn=None,
+            blueprint_id=None
+    ):
+        url = self.ENDPOINT + "/batch"
+        params = self._map_parameters(
+            locals(),
+            self.create_batch.actual_kwargs,
+            BATCH_DEFINITION_ARG_MAP
+        )
+        return self.post(url, data=params)
+    
     @_arg_decorator
     def create_blueprint(
             self,

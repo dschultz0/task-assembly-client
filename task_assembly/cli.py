@@ -46,6 +46,22 @@ class CLI:
             yaml.dump(definition, fp)
         print(f"The file {definition_file} has been migrated to {yaml_name}, you may delete the original json file")
 
+    def create_batch(self,
+            definition=None,
+            blueprint_id=None,
+            render_handler_arn=None):
+        
+        params = {}
+
+        if render_handler_arn:
+            params["render_handler_arn"] = render_handler_arn
+        if blueprint_id:
+            params["blueprint_id"] = blueprint_id
+        if definition:
+            params["definition"] = definition
+
+        print(json.dumps(self.client.create_batch(**params), indent=4))
+
     def create_blueprint(self, name,
             task_template=None,
             service=None,
@@ -139,20 +155,26 @@ def main():
     gtd_parser = subparsers.add_parser("get_blueprints")
     gtd_parser.set_defaults(func=CLI.get_blueprints)
 
-    ct_parser = subparsers.add_parser("create_blueprint")
-    ct_parser.add_argument("--name", type=str)
-    ct_parser.add_argument("--render_handler_arn", type=str)
-    ct_parser.add_argument("--service", type=str)
-    ct_parser.add_argument("--title", type=str)
-    ct_parser.add_argument("--description", type=str)
-    ct_parser.add_argument("--reward_cents", type=int)
-    ct_parser.add_argument("--assignment_duration_seconds", type=int)
-    ct_parser.add_argument("--lifetime_seconds", type=int)
-    ct_parser.add_argument("--default_assignments", type=int)
-    ct_parser.add_argument("--max_assignments", type=int)
-    ct_parser.add_argument("--auto_approval_delay", type=int)
-    ct_parser.add_argument("--keywords", type=str)
-    ct_parser.set_defaults(func=CLI.create_blueprint)
+    cblue_parser = subparsers.add_parser("create_blueprint")
+    cblue_parser.add_argument("--name", type=str)
+    cblue_parser.add_argument("--render_handler_arn", type=str)
+    cblue_parser.add_argument("--service", type=str)
+    cblue_parser.add_argument("--title", type=str)
+    cblue_parser.add_argument("--description", type=str)
+    cblue_parser.add_argument("--reward_cents", type=int)
+    cblue_parser.add_argument("--assignment_duration_seconds", type=int)
+    cblue_parser.add_argument("--lifetime_seconds", type=int)
+    cblue_parser.add_argument("--default_assignments", type=int)
+    cblue_parser.add_argument("--max_assignments", type=int)
+    cblue_parser.add_argument("--auto_approval_delay", type=int)
+    cblue_parser.add_argument("--keywords", type=str)
+    cblue_parser.set_defaults(func=CLI.create_blueprint)
+
+    cbatch_parser = subparsers.add_parser("create_batch")
+    cbatch_parser.add_argument("--render_handler_arn", type=str)
+    cbatch_parser.add_argument("--blueprint_id", type=str)
+    cbatch_parser.add_argument("--definition", type=str)
+    cbatch_parser.set_defaults(func=CLI.create_batch)
 
     args = parser.parse_args()
 
