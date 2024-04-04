@@ -2,6 +2,24 @@ import uuid
 import warnings
 from html import escape
 
+BLUEPRINT_DEFINITION_ARG_MAP = {
+    "name": "name",
+    "task_template": "taskTemplate",
+    "render_handler_arn": "renderHandlerArn",
+    "crowdConfig" : {
+        "crowdconfig_service": "service",
+        "crowdconfig_title": "title",
+        "crowdconfig_description": "description",
+        "crowdconfig_reward_cents": "rewardCents",
+        "crowdconfig_assignment_duration_seconds": "assignmentDurationSeconds",
+        "crowdconfig_lifetime_seconds": "lifetimeSeconds",
+        "crowdconfig_default_assignments": "defaultAssignments",
+        "crowdconfig_max_assignments": "maxAssignments",
+        "crowdconfig_auto_approval_delay": "autoApprovalDelay",
+        "crowdconfig_keywords": "keywords"
+    }
+}
+
 TASK_DEFINITION_ARG_MAP = {
     "definition_id": "DefinitionId",
     "name": "Name",
