@@ -23,7 +23,7 @@ from .utils import REV_TASK_DEFINITION_ARG_MAP
 
 class CLI:
 
-    def __init__(self, client:AssemblyClient):
+    def __init__(self, client):
         self.client = client
         self.delimiter_map = {
             "tsv": "\t",
@@ -448,8 +448,6 @@ class CLI:
             fieldnames.update(dict.fromkeys(result.keys()))
         return list(fieldnames.keys())
 
-    def get_blueprints(self):
-        print(json.dumps(self.client.get_blueprints(), indent=4))
 
 def load_config(ta_config, profile) -> str:
     if not ta_config.exists():
@@ -494,8 +492,125 @@ def main():
     c_parser.add_argument("--aws_profile")
     c_parser.add_argument("--validate", action="store_true")
 
-    gtd_parser = subparsers.add_parser("get_blueprints")
-    gtd_parser.set_defaults(func=CLI.get_blueprints)
+    ex_parser = subparsers.add_parser("example")
+    ex_parser.set_defaults(func=CLI.example)
+
+    my_parser = subparsers.add_parser("migrate_yaml")
+    my_parser.add_argument("--definition_file", default="definition.json")
+    my_parser.set_defaults(func=CLI.migrate_yaml)
+
+    ctt_parser = subparsers.add_parser("create_task_type")
+    ctt_parser.add_argument("name")
+    ctt_parser.set_defaults(func=CLI.create_task_type)
+
+    ctd_parser = subparsers.add_parser("create_task_definition")
+    ctd_parser.add_argument("name")
+    ctd_parser.add_argument("task_type_id")
+    ctd_parser.set_defaults(func=CLI.create_task_definition)
+
+    utd_parser = subparsers.add_parser("update_task_definition")
+    utd_parser.add_argument("--definition_file", default="definition.yaml")
+    utd_parser.set_defaults(func=CLI.update_task_definition)
+
+    gtd_parser = subparsers.add_parser("get_task_definition")
+    gtd_parser.add_argument("id")
+    gtd_parser.add_argument("--definition_file")
+    gtd_parser.set_defaults(func=CLI.get_task_definition)
+
+    gtdg_parser = subparsers.add_parser("get_task_definition_gold")
+    gtdg_parser.add_argument("id")
+    gtdg_parser.set_defaults(func=CLI.get_task_definition_gold)
+
+    ct_parser = subparsers.add_parser("create_task")
+    ct_parser.add_argument("values", type=str, nargs="*")
+    ct_parser.add_argument("--assignments", type=int)
+    ct_parser.add_argument("--sandbox", action="store_true")
+    ct_parser.add_argument("--definition_file", default="definition.yaml")
+    ct_parser.add_argument("--max_assignments", type=int)
+    ct_parser.add_argument("--quals", type=str)
+    ct_parser.add_argument("--use_computed_result", action="store_true")
+    ct_parser.add_argument("--tag", dest="tags", nargs=2, action="append")
+    ct_parser.set_defaults(func=CLI.create_task)
+
+    gt_parser = subparsers.add_parser("get_task")
+    gt_parser.add_argument("task_id")
+    gt_parser.add_argument("--include_assignments", action="store_true")
+    gt_parser.set_defaults(func=CLI.get_task)
+
+    st_parser = subparsers.add_parser("stop_task")
+    st_parser.add_argument("task_id")
+    st_parser.set_defaults(func=CLI.stop_task)
+
+    rt_parser = subparsers.add_parser("redrive_task")
+    rt_parser.add_argument("task_id")
+    rt_parser.add_argument("--extend", action="store_true")
+    rt_parser.set_defaults(func=CLI.redrive_task)
+
+    sb_parser = subparsers.add_parser("submit_batch")
+    sb_parser.add_argument("--definition_file", default="definition.yaml")
+    sb_parser.add_argument("--sandbox", action="store_true")
+    sb_parser.add_argument("--assignments", type=int)
+    sb_parser.add_argument("name")
+    sb_parser.add_argument("input_file")
+    sb_parser.add_argument("s3_uri_prefix")
+    sb_parser.set_defaults(func=CLI.submit_batch)
+
+    stb_parser = subparsers.add_parser("stop_batch")
+    stb_parser.add_argument("batch_id")
+    stb_parser.set_defaults(func=CLI.stop_batch)
+
+    gbs_parser = subparsers.add_parser("get_batch_status")
+    gbs_parser.add_argument("batch_id")
+    gbs_parser.set_defaults(func=CLI.get_batch_status)
+
+    gbr_parser = subparsers.add_parser("get_batch_results")
+    gbr_parser.add_argument("batch_id")
+    gbr_parser.add_argument("output_file")
+    gbr_parser.set_defaults(func=CLI.get_batch_results)
+
+    gbr_parser = subparsers.add_parser("build_gold_from_batch")
+    gbr_parser.add_argument("batch_id")
+    gbr_parser.add_argument("--output_file", default="gold.json")
+    gbr_parser.set_defaults(func=CLI.build_gold_from_batch)
+
+    lw_parser = subparsers.add_parser("list_workers")
+    lw_parser.add_argument("--definition_file", default="definition.yaml")
+    lw_parser.add_argument("output_file")
+    lw_parser.set_defaults(func=CLI.list_workers)
+
+    lt_parser = subparsers.add_parser("list_tasks")
+    lt_parser.add_argument("--definition_file", default="definition.yaml")
+    lt_parser.add_argument("output_file")
+    lt_parser.add_argument("--tag", nargs=2)
+    lt_parser.add_argument("--batch_id")
+    lt_parser.add_argument("--task_definition_id")
+    lt_parser.add_argument("--max_results", type=int)
+    lt_parser.set_defaults(func=CLI.list_tasks)
+
+    clt_parser = subparsers.add_parser("close_testing")
+    clt_parser.add_argument("--definition_file", default="definition.yaml")
+    clt_parser.add_argument("--min_score", type=int)
+    clt_parser.set_defaults(func=CLI.close_testing)
+
+    lb_parser = subparsers.add_parser("list_batches")
+    lb_parser.add_argument("--definition_file", default="definition.yaml")
+    lb_parser.add_argument("--all_definitions", action="store_true")
+    lb_parser.add_argument("--output_file")
+    lb_parser.set_defaults(func=CLI.list_batches)
+
+    rds_parser = subparsers.add_parser("redrive_scoring")
+    rds_parser.add_argument("--definition_file", default="definition.yaml")
+    rds_parser.set_defaults(func=CLI.redrive_scoring)
+
+    rb_parser = subparsers.add_parser("redrive_batch")
+    rb_parser.add_argument("batch_id")
+    rb_parser.add_argument("--extend", action="store_true")
+    rb_parser.set_defaults(func=CLI.redrive_batch)
+
+    rsb_parser = subparsers.add_parser("resolve_batch")
+    rsb_parser.add_argument("batch_id")
+    rsb_parser.add_argument("--extend", action="store_true")
+    rsb_parser.set_defaults(func=CLI.resolve_batch)
 
     args = parser.parse_args()
 
@@ -535,7 +650,13 @@ def main():
     client = AssemblyClient(api_key)
     cli = CLI(client)
 
-    if args.func:
+    if args.command == "configure" and args.validate:
+        response = client.validate()
+        print(f"Organization: {response['Organization']['Name']}")
+        print(f"AWS Account: {response['AWSAccountId']}")
+        print(f"MTurk connection status: {'SUCCESS' if response.get('MTurk') else 'FAILED'}")
+        print(f"MTurk Sandbox connection status: {'SUCCESS' if response.get('MTurkSandbox') else 'FAILED'}")
+    elif args.func:
         arg_dict = dict(args._get_kwargs())
         arg_dict.pop("func")
         arg_dict.pop("command")
