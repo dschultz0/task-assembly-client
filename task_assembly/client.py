@@ -58,7 +58,7 @@ class AssemblyClient(APIClient):
             crowdconfig_lifetime_seconds=None,
             crowdconfig_default_assignments=None,
             crowdconfig_max_assignments=None,
-            crowdconfig__auto_approval_delay=None,
+            crowdconfig_auto_approval_delay=None,
             crowdconfig_keywords=None,
             render_handler_arn=None
     ):

@@ -15,7 +15,7 @@ BLUEPRINT_DEFINITION_ARG_MAP = {
         "crowdconfig_lifetime_seconds": "lifetimeSeconds",
         "crowdconfig_default_assignments": "defaultAssignments",
         "crowdconfig_max_assignments": "maxAssignments",
-        "crowdconfig__auto_approval_delay": "autoApprovalDelay",
+        "crowdconfig_auto_approval_delay": "autoApprovalDelay",
         "crowdconfig_keywords": "keywords"
     }
 }
