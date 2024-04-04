@@ -88,7 +88,7 @@ class CLI:
         if keywords:
             params["crowdconfig_keywords"] = keywords
 
-        self.create_blueprint(**params)
+        print(json.dumps(self.client.create_blueprint(**params), indent=4))
 
     def get_blueprints(self):
         print(json.dumps(self.client.get_blueprints(), indent=4))
