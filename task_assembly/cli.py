@@ -23,7 +23,7 @@ from .utils import REV_TASK_DEFINITION_ARG_MAP
 
 class CLI:
 
-    def __init__(self, client:AssemblyClient):
+    def __init__(self, client: AssemblyClient):
         self.client = client
         self.delimiter_map = {
             "tsv": "\t",
@@ -44,13 +44,12 @@ class CLI:
             definition = json.load(fp)
         with open(yaml_name, "w") as fp:
             yaml.dump(definition, fp)
-        print(f"The file {definition_file} has been migrated to {yaml_name}, you may delete the original json file")
+        print(
+            f"The file {definition_file} has been migrated to {yaml_name}, you may delete the original json file"
+        )
 
-    def create_batch(self,
-            definition=None,
-            blueprint_id=None,
-            render_handler_arn=None):
-        
+    def create_batch(self, definition=None, blueprint_id=None, render_handler_arn=None):
+
         params = {}
 
         if render_handler_arn:
@@ -62,20 +61,23 @@ class CLI:
 
         print(json.dumps(self.client.create_batch(**params), indent=4))
 
-    def create_blueprint(self, name,
-            task_template=None,
-            service=None,
-            title=None,
-            description=None,
-            reward_cents=None,
-            assignment_duration_seconds=None,
-            lifetime_seconds=None,
-            default_assignments=None,
-            max_assignments=None,
-            auto_approval_delay=None,
-            keywords=None,
-            render_handler_arn=None):
-        
+    def create_blueprint(
+        self,
+        name,
+        task_template=None,
+        service=None,
+        title=None,
+        description=None,
+        reward_cents=None,
+        assignment_duration_seconds=None,
+        lifetime_seconds=None,
+        default_assignments=None,
+        max_assignments=None,
+        auto_approval_delay=None,
+        keywords=None,
+        render_handler_arn=None,
+    ):
+
         params = {}
         params["name"] = name
 
@@ -90,9 +92,11 @@ class CLI:
         if description:
             params["crowdconfig_description"] = description
         if reward_cents:
-            params["crowdconfig_reward_cents"] = reward_cents                        
+            params["crowdconfig_reward_cents"] = reward_cents
         if assignment_duration_seconds:
-            params["crowdconfig_assignment_duration_seconds"] = assignment_duration_seconds
+            params["crowdconfig_assignment_duration_seconds"] = (
+                assignment_duration_seconds
+            )
         if lifetime_seconds:
             params["crowdconfig_lifetime_seconds"] = lifetime_seconds
         if default_assignments:
@@ -108,6 +112,7 @@ class CLI:
 
     def get_blueprints(self):
         print(json.dumps(self.client.get_blueprints(), indent=4))
+
 
 def load_config(ta_config, profile) -> str:
     if not ta_config.exists():
@@ -130,7 +135,7 @@ def load_config(ta_config, profile) -> str:
     if "api_key" in profile_credentials:
         api_key = profile_credentials.get("api_key")
     elif "api_key_secret" in profile_credentials:
-        sm = lry.session().client('secretsmanager')
+        sm = lry.session().client("secretsmanager")
         response = sm.get_secret_value(SecretId=profile_credentials["api_key_secret"])
         secret_value = response["SecretString"]
         try:
@@ -171,9 +176,9 @@ def main():
     cblue_parser.set_defaults(func=CLI.create_blueprint)
 
     cbatch_parser = subparsers.add_parser("create_batch")
-    cbatch_parser.add_argument("--render_handler_arn", type=str)
-    cbatch_parser.add_argument("--blueprint_id", type=str)
-    cbatch_parser.add_argument("--definition", type=str)
+    cbatch_parser.add_argument("--render_handler_arn", type=str, required=True)
+    cbatch_parser.add_argument("--blueprint_id", type=str, required=True)
+    cbatch_parser.add_argument("--definition", type=str, required=True)
     cbatch_parser.set_defaults(func=CLI.create_batch)
 
     args = parser.parse_args()
@@ -182,7 +187,9 @@ def main():
     ta_config = ta_dir.joinpath("config.toml")
     profile = args.profile if args.profile else "default"
 
-    if args.command == "configure" and (args.key or args.key_secret or args.aws_profile):
+    if args.command == "configure" and (
+        args.key or args.key_secret or args.aws_profile
+    ):
         ta_dir.mkdir(exist_ok=True)
         config = {"version": "0.1"}
         if ta_config.exists():

@@ -12,7 +12,7 @@ BLUEPRINT_DEFINITION_ARG_MAP = {
     "name": "name",
     "task_template": "taskTemplate",
     "render_handler_arn": "renderHandlerArn",
-    "crowdConfig" : {
+    "crowdConfig": {
         "crowdconfig_service": "service",
         "crowdconfig_title": "title",
         "crowdconfig_description": "description",
@@ -22,8 +22,8 @@ BLUEPRINT_DEFINITION_ARG_MAP = {
         "crowdconfig_default_assignments": "defaultAssignments",
         "crowdconfig_max_assignments": "maxAssignments",
         "crowdconfig_auto_approval_delay": "autoApprovalDelay",
-        "crowdconfig_keywords": "keywords"
-    }
+        "crowdconfig_keywords": "keywords",
+    },
 }
 
 TASK_DEFINITION_ARG_MAP = {
@@ -51,7 +51,7 @@ TASK_DEFINITION_ARG_MAP = {
     "handler_code": "HandlerCode",
     "gold_answers": "GoldAnswers",
     "test_policy": "TestPolicy",
-    "result_layout": "ResultLayout"
+    "result_layout": "ResultLayout",
 }
 REV_TASK_DEFINITION_ARG_MAP = {v: k for k, v in TASK_DEFINITION_ARG_MAP.items()}
 
