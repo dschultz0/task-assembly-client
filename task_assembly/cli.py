@@ -108,7 +108,12 @@ class CLI:
         if keywords:
             params["crowdconfig_keywords"] = keywords
 
-        print(json.dumps(self.client.create_blueprint(**params), indent=4))
+        blueprint = self.client.create_blueprint(**params)
+        with open("blueprint.yaml", "w") as fp:
+            yaml.dump(blueprint, fp)
+        print(
+            f"Created task definition in blueprint.yaml"
+        )
 
     def get_blueprints(self):
         print(json.dumps(self.client.get_blueprints(), indent=4))
