@@ -45,7 +45,13 @@ class CLI:
             f"The file {definition_file} has been migrated to {yaml_name}, you may delete the original json file"
         )
 
-    def create_batch(self, definition=None, blueprint_id=None, render_handler_arn=None):
+    def create_batch(
+        self,
+        definition=None,
+        blueprint_id=None,
+        render_handler_arn=None,
+        file_name=None,
+    ):
         params = {}
 
         if render_handler_arn:
@@ -54,17 +60,19 @@ class CLI:
             params["blueprint_id"] = blueprint_id
         if definition:
             params["definition"] = definition
+        if file_name:
+            params["file_name"] = file_name
 
         print(json.dumps(self.client.create_batch(**params), indent=4))
 
     def update_blueprint(self, blueprint_file=None):
         blueprint = self.read_definition(blueprint_file)
         flatten_blueprint = flatten_dict(blueprint)
-        flatten_keys = flatten_dict(BLUEPRINT_DEFINITION_ARG_MAP)
+        flatten_blpdef = flatten_dict(BLUEPRINT_DEFINITION_ARG_MAP)
 
         params = {}
         for k in flatten_blueprint.keys():
-            for k1, v1 in flatten_keys.items():
+            for k1, v1 in flatten_blpdef.items():
                 kl = k.lower()
                 k1l = "attribute_values." + v1.lower()
                 if kl.find(k1l) > -1:
@@ -198,6 +206,7 @@ def main():
     cbatch_parser.add_argument("--render_handler_arn", type=str, required=True)
     cbatch_parser.add_argument("--blueprint_id", type=str, required=True)
     cbatch_parser.add_argument("--definition", type=str, required=True)
+    cbatch_parser.add_argument("--file_name", type=str)
     cbatch_parser.set_defaults(func=CLI.create_batch)
 
     args = parser.parse_args()
