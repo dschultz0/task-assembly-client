@@ -1,6 +1,31 @@
 import uuid
 import warnings
+from collections.abc import MutableMapping
 from html import escape
+
+BATCH_DEFINITION_ARG_MAP = {
+    "definition": "definition",
+    "blueprint_id": "blueprintId",
+    "render_handler_arn": "renderHandlerArn",
+}
+
+BLUEPRINT_DEFINITION_ARG_MAP = {
+    "name": "name",
+    "task_template": "taskTemplate",
+    "render_handler_arn": "renderHandlerArn",
+    "crowdConfig": {
+        "crowdconfig_service": "service",
+        "crowdconfig_title": "title",
+        "crowdconfig_description": "description",
+        "crowdconfig_reward_cents": "rewardCents",
+        "crowdconfig_assignment_duration_seconds": "assignmentDurationSeconds",
+        "crowdconfig_lifetime_seconds": "lifetimeSeconds",
+        "crowdconfig_default_assignments": "defaultAssignments",
+        "crowdconfig_max_assignments": "maxAssignments",
+        "crowdconfig_auto_approval_delay": "autoApprovalDelay",
+        "crowdconfig_keywords": "keywords",
+    },
+}
 
 TASK_DEFINITION_ARG_MAP = {
     "definition_id": "DefinitionId",
@@ -27,7 +52,7 @@ TASK_DEFINITION_ARG_MAP = {
     "handler_code": "HandlerCode",
     "gold_answers": "GoldAnswers",
     "test_policy": "TestPolicy",
-    "result_layout": "ResultLayout"
+    "result_layout": "ResultLayout",
 }
 REV_TASK_DEFINITION_ARG_MAP = {v: k for k, v in TASK_DEFINITION_ARG_MAP.items()}
 
@@ -84,3 +109,21 @@ def display_link(url, prefix):
             prefix, url
         )
     )
+
+
+def flatten_dict(
+    d: MutableMapping, parent_key: str = "", sep: str = "."
+) -> MutableMapping:
+    items = []
+    for k, v in d.items():
+        new_key = parent_key + sep + k if parent_key else k
+        if isinstance(v, MutableMapping):
+            items.extend(flatten_dict(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
+
+
+REV_BLUEPRINT_DEFINITION_ARG_MAP = {
+    v: k for k, v in flatten_dict(BLUEPRINT_DEFINITION_ARG_MAP).items()
+}
