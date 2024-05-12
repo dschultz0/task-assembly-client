@@ -1,28 +1,19 @@
-import itertools
+import argparse
 import json
 import os.path
-import posixpath
-import sys
-from pathlib import Path
-from pkg_resources import resource_filename
 import shutil
-from datetime import datetime
+from pathlib import Path
 
 import larry as lry
-import argparse
 import toml
 import yaml
-import csv
-
-from botocore.exceptions import ClientError
-from tabulate import tabulate
+from pkg_resources import resource_filename
 
 from .client import AssemblyClient
-from .utils import REV_TASK_DEFINITION_ARG_MAP
+from .utils import BLUEPRINT_DEFINITION_ARG_MAP, flatten_dict
 
 
 class CLI:
-
     def __init__(self, client: AssemblyClient):
         self.client = client
         self.delimiter_map = {
@@ -30,6 +21,12 @@ class CLI:
             "csv": ",",
             "txt": "\t",
         }
+
+    @staticmethod
+    def read_definition(file_name):
+        with open(file_name, "r") as ffp:
+            definition_ = yaml.safe_load(ffp)
+        return definition_
 
     def example(self):
         files = ["batch.csv", "gold.json", "handlers.py", "template.html"]
@@ -49,7 +46,6 @@ class CLI:
         )
 
     def create_batch(self, definition=None, blueprint_id=None, render_handler_arn=None):
-
         params = {}
 
         if render_handler_arn:
@@ -60,6 +56,23 @@ class CLI:
             params["definition"] = definition
 
         print(json.dumps(self.client.create_batch(**params), indent=4))
+
+    def update_blueprint(self, blueprint_file=None):
+        blueprint = self.read_definition(blueprint_file)
+        flatten_blueprint = flatten_dict(blueprint)
+        flatten_keys = flatten_dict(BLUEPRINT_DEFINITION_ARG_MAP)
+
+        params = {}
+        for k in flatten_blueprint.keys():
+            for k1, v1 in flatten_keys.items():
+                kl = k.lower()
+                k1l = "attribute_values." + v1.lower()
+                if kl.find(k1l) > -1:
+                    nk = k1[k1.index(".") + 1 :] if k1.find(".") > -1 else k1
+                    params[nk] = flatten_blueprint[k]
+
+        self.client.update_blueprint(**params)
+        print(f"Updated blueprint")
 
     def create_blueprint(
         self,
@@ -78,8 +91,7 @@ class CLI:
         render_handler_arn=None,
     ):
 
-        params = {}
-        params["name"] = name
+        params = {"name": name}
 
         if render_handler_arn:
             params["render_handler_arn"] = render_handler_arn
@@ -111,9 +123,7 @@ class CLI:
         blueprint = self.client.create_blueprint(**params)
         with open("blueprint.yaml", "w") as fp:
             yaml.dump(blueprint, fp)
-        print(
-            f"Created task definition in blueprint.yaml"
-        )
+        print(f"Created task definition in blueprint.yaml")
 
     def get_blueprints(self):
         print(json.dumps(self.client.get_blueprints(), indent=4))
@@ -164,6 +174,10 @@ def main():
 
     gtd_parser = subparsers.add_parser("get_blueprints")
     gtd_parser.set_defaults(func=CLI.get_blueprints)
+
+    ublue_parser = subparsers.add_parser("update_blueprint")
+    ublue_parser.add_argument("--blueprint_file", default="blueprint.yaml")
+    ublue_parser.set_defaults(func=CLI.update_blueprint)
 
     cblue_parser = subparsers.add_parser("create_blueprint")
     cblue_parser.add_argument("--name", type=str)

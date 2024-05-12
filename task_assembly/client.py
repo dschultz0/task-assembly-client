@@ -83,6 +83,35 @@ class AssemblyClient(APIClient):
         return self.post(url, data=params)
 
     @_arg_decorator
+    def update_blueprint(
+        self,
+        name=None,
+        task_template=None,
+        crowdconfig_service=None,
+        crowdconfig_title=None,
+        crowdconfig_description=None,
+        crowdconfig_reward_cents=None,
+        crowdconfig_assignment_duration_seconds=None,
+        crowdconfig_lifetime_seconds=None,
+        crowdconfig_default_assignments=None,
+        crowdconfig_max_assignments=None,
+        crowdconfig_auto_approval_delay=None,
+        crowdconfig_keywords=None,
+        render_handler_arn=None,
+    ):
+        url = self.ENDPOINT + "/blueprint"
+        params = self._map_parameters(
+            locals(),
+            self.put_blueprint.actual_kwargs,
+            BLUEPRINT_DEFINITION_ARG_MAP,
+        )
+        return self.put(url, data=params)
+
+    def add_task_as_gold(self, task_id):
+        url = self.ENDPOINT + "/taskDefinition/addGold"
+        return self.post(url, data={"TaskId": task_id})
+
+    @_arg_decorator
     def get_blueprints(self):
         url = self.ENDPOINT + "/blueprint"
         params = self._map_parameters(locals(), self.get_blueprints.actual_kwargs, {})

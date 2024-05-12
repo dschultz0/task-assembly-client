@@ -1,5 +1,6 @@
 import uuid
 import warnings
+from collections.abc import MutableMapping
 from html import escape
 
 BATCH_DEFINITION_ARG_MAP = {
@@ -108,3 +109,21 @@ def display_link(url, prefix):
             prefix, url
         )
     )
+
+
+def flatten_dict(
+    d: MutableMapping, parent_key: str = "", sep: str = "."
+) -> MutableMapping:
+    items = []
+    for k, v in d.items():
+        new_key = parent_key + sep + k if parent_key else k
+        if isinstance(v, MutableMapping):
+            items.extend(flatten_dict(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
+
+
+REV_BLUEPRINT_DEFINITION_ARG_MAP = {
+    v: k for k, v in flatten_dict(BLUEPRINT_DEFINITION_ARG_MAP).items()
+}
