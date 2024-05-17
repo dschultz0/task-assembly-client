@@ -332,6 +332,24 @@ class AssemblyClient(APIClient):
         return self.post(url, data=params)
 
     @_arg_decorator
+    def redrive_tasks(self, definition_id=None, tag_name=None, tag_value=None,
+                      start_datetime=None, end_datetime=None, extend=False):
+        url = self.ENDPOINT + "/definition/redrive"
+        params = self._map_parameters(
+            locals(),
+            self.redrive_tasks.actual_kwargs,
+            {
+                "definition_id": "DefinitionId",
+                "tag_name": "TagName",
+                "tag_value": "TagValue",
+                "start_datetime": "StartDatetime",
+                "end_datetime": "EndDatetime",
+                "extend": "Extend"
+            },
+        )
+        return self.post(url, data=params)
+
+    @_arg_decorator
     def redrive_batch(self, batch_id, extend=False):
         url = self.ENDPOINT + "/batch/redrive"
         params = self._map_parameters(

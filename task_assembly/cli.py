@@ -268,6 +268,30 @@ class CLI:
                     worker["Score"] = round(worker["Points"]/worker["ScoredCount"], 1)
                 writer.writerow(worker)
 
+    def redrive_tasks(self,
+                      definition_file=None,
+                      tag: typing.List[str] = None,
+                      start: str = None,
+                      end: str = None,
+                      extend: bool = False,
+                      task_definition_id: str = None):
+        def_id = None
+        if os.path.exists(definition_file):
+            def_id = task_definition_id if task_definition_id else self.read_definition(definition_file)["DefinitionId"]
+        params = {
+            "definition_id": def_id,
+            "extend": extend
+        }
+        if tag:
+            params["tag_name"] = tag[0]
+            params["tag_value"] = tag[1]
+        if start:
+            params["start_datetime"] = start
+        if end:
+            params["end_datetime"] = end
+
+        self.client.redrive_tasks(**params)
+
     def list_tasks(self,
                    output_file,
                    definition_file=None,
@@ -684,6 +708,14 @@ def main():
     lt_parser.add_argument("--task_definition_id")
     lt_parser.add_argument("--max_results", type=int)
     lt_parser.set_defaults(func=CLI.list_tasks)
+
+    rts_parser = subparsers.add_parser("redrive_tasks")
+    rts_parser.add_argument("--definition_file", default="definition.yaml")
+    rts_parser.add_argument("--tag", nargs=2)
+    rts_parser.add_argument("--start")
+    rts_parser.add_argument("--end")
+    rts_parser.add_argument("--extend", action="store_true")
+    rts_parser.set_defaults(func=CLI.redrive_tasks)
 
     la_parser = subparsers.add_parser("list_assignments")
     la_parser.add_argument("--definition_file", default="definition.yaml")
