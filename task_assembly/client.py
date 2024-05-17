@@ -463,7 +463,9 @@ class AssemblyClient(APIClient):
             test_index: int = None,
             max_results: int = None,
             start_key=None,
-            include_detail: bool = None):
+            include_detail: bool = None,
+            tests_only: bool = None
+    ):
         params = self._map_parameters(
             locals(),
             self.list_assignments.actual_kwargs,
@@ -473,7 +475,8 @@ class AssemblyClient(APIClient):
                 "test_index": "TestIndex",
                 "max_results": "MaxResults",
                 "start_key": "StartKey",
-                "include_detail": "IncludeTaskDetail"
+                "include_detail": "IncludeTaskDetail",
+                "tests_only": "TestsOnly",
             },
         )
         return self.get(f"{self.ENDPOINT}/assignments", params)
@@ -484,12 +487,14 @@ class AssemblyClient(APIClient):
             worker_id=None,
             test_index: int = None,
             max_results: int = None,
-            include_detail: bool = None):
+            include_detail: bool = None,
+            tests_only: bool = None,
+    ):
         start_key = None
         complete = False
         while not complete:
             response = self.list_assignments(
-                definition_id, worker_id, test_index, max_results, start_key, include_detail
+                definition_id, worker_id, test_index, max_results, start_key, include_detail, tests_only
             )
             start_key = response.get("NextKey")
             if not start_key:

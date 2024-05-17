@@ -352,23 +352,31 @@ class CLI:
                          definition_id=None,
                          worker_id=None,
                          test_index=None,
+                         tests=None,
                          max_results=None):
         def_id = self.get_definition_id(definition_file, definition_id)
         if def_id is None:
             print("Missing definition id or file")
             sys.exit(-1)
-        assignments = self.client.iter_assignments(def_id, worker_id=worker_id, test_index=test_index)
-        if max_results:
-            assignments = itertools.islice(assignments, max_results)
-        assignments = list(assignments)
+        if tests:
+            gold = self.get_gold_file(definition_file)
+            all_assignments = []
+            for i in range(len(gold)):
+                assignments = self.client.iter_assignments(def_id, worker_id=worker_id, test_index=i)
+                all_assignments.extend(list(assignments))
+            assignments = all_assignments
+        else:
+            assignments = self.client.iter_assignments(def_id, worker_id=worker_id, test_index=test_index)
+            if max_results:
+                assignments = itertools.islice(assignments, max_results)
+            assignments = list(assignments)
         if output_file.endswith(".jsonl"):
             with open(output_file, "w", encoding="utf-8") as fp:
                 fp.writelines([json.dumps(a) + "\n" for a in assignments])
         else:
-            field_order = ['TaskId', 'AssignmentId', 'WorkerId', 'Accepted', 'Submitted', 'Answer', 'Result', 'TestData', 'Score']
+            field_order = ['TaskId', 'AssignmentId', 'WorkerId', 'Accepted', 'Submitted', 'Answer', 'Result', 'Excluded', 'TestData', 'Score']
             field_map = defaultdict(set)
             compound_fields = ['Answer', 'TestData']
-            # excluded_fields = ['Id', 'Excluded']
             records = []
             for a in assignments:
                 record = {}
@@ -382,13 +390,20 @@ class CLI:
                                 field_map[f].add(key)
                         elif f == "Result" and isinstance(value, dict):
                             base_key = list(value.keys())[0]
-                            for k, v in value[base_key].items():
-                                key = f"{f}.{base_key}.{k}"
-                                record[key] = v
+                            if isinstance(value[base_key], dict):
+                                for k, v in value[base_key].items():
+                                    key = f"{f}.{base_key}.{k}"
+                                    record[key] = v
+                                    field_map[f].add(key)
+                            else:
+                                key = f"{f}.{base_key}"
+                                record[key] = value[base_key]
                                 field_map[f].add(key)
                         else:
                             record[f] = value
                             field_map[f].add(f)
+                # truncate any values greater than 32760 characters (the Excel max)
+                record = {k: str(v) if len(str(v)) < 32760 else f"{str(v)[:32750]}..." for k, v in record.items()}
                 records.append(record)
             field_names = [f for fs in field_map.values() for f in fs]
             with open(output_file, "w", newline="", encoding="utf-8") as fp:
@@ -513,6 +528,16 @@ class CLI:
         with open(file_name, "r") as ffp:
             definition_ = yaml.safe_load(ffp)
         return definition_
+
+    @staticmethod
+    def get_gold_file(definition_file_name):
+        definition = CLI.read_definition(definition_file_name)
+        gold_file = definition.get("GoldAnswersFile")
+        if not gold_file:
+            print("No GoldAnswersFile specified in the task definition")
+            sys.exit(-1)
+        with open(gold_file) as fp:
+            return json.load(fp)
 
     @staticmethod
     def get_definition_id(file_name, definition_id=None):
@@ -723,6 +748,7 @@ def main():
     la_parser.add_argument("output_file")
     la_parser.add_argument("--worker_id")
     la_parser.add_argument("--test_index", type=int)
+    la_parser.add_argument("--tests", action="store_true")
     la_parser.add_argument("--max_results", type=int)
     la_parser.set_defaults(func=CLI.list_assignments)
 
