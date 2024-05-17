@@ -312,6 +312,16 @@ class CLI:
             for task in tasks:
                 writer.writerow(task)
 
+    def reset_worker_score(self,
+                           worker_id=None,
+                           definition_file=None,
+                           definition_id=None):
+        def_id = self.get_definition_id(definition_file, definition_id)
+        if def_id is None:
+            print("Missing definition id or file")
+            sys.exit(-1)
+        self.client.reset_worker_score(worker_id, def_id)
+
     def list_assignments(self,
                          output_file: str,
                          definition_file=None,
@@ -719,6 +729,12 @@ def main():
     gts_parser.add_argument("--definition_file", default="definition.yaml")
     gts_parser.add_argument("--output_file", default="test_statistics.csv")
     gts_parser.set_defaults(func=CLI.gather_test_statistics)
+
+    rws_parser = subparsers.add_parser("reset_worker_score")
+    rws_parser.add_argument("worker_id")
+    rws_parser.add_argument("--definition_file", default="definition.yaml")
+    rws_parser.add_argument("--definition_id")
+    rws_parser.set_defaults(func=CLI.reset_worker_score)
 
     args = parser.parse_args()
 
