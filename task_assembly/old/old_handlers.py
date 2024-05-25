@@ -2,7 +2,7 @@ import sys
 import traceback
 import larry as lry
 
-
+'''
 def create_consolidation_lambda(
     handler,
     name,
@@ -49,3 +49,4 @@ def consolidation(func):
             return {"error": e.args[0], "trace": trace}
 
     return consolidation_wrapper
+'''

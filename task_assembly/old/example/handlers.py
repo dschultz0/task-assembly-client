@@ -1,3 +1,4 @@
+'''
 def process_response(event, context):
     return event.get("numberAsText")
 
@@ -48,3 +49,4 @@ def score_response(event, context):
         return 80
     else:
         return 0
+'''

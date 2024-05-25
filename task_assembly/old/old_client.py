@@ -1,3 +1,4 @@
+'''
 import io
 import json
 from apiclient import (
@@ -549,3 +550,4 @@ class AssemblyClient(APIClient):
         return create_consolidation_lambda(
             handler, name, role, imports, functions, files, layers, timeout
         )
+'''

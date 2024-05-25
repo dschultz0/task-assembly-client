@@ -1,3 +1,4 @@
+'''
 import itertools
 import json
 import os.path
@@ -32,7 +33,7 @@ class CLI:
         }
 
     def example(self):
-        files = ["batch.csv", "gold.json", "handlers.py", "template.html"]
+        files = ["batch.csv", "gold.json", "old_handlers.py", "template.html"]
         for file in files:
             shutil.copy(resource_filename(__name__, f"example/{file}"), os.getcwd())
         print(f"The files {files} have been added to the current directory")
@@ -761,3 +762,4 @@ def main():
         args.func(cli, **arg_dict)
     else:
         raise Exception("Misformated command")
+'''
