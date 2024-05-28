@@ -66,7 +66,7 @@ class CrowdConfig:
 
 class AssemblyClient(APIClient):
     # TODO get this url directly from lambda
-    ENDPOINT = "https://qdlb4szcaoqni3l5ubyghxclym0obhoe.lambda-url.us-east-1.on.aws/"
+    ENDPOINT = "https://ppovten64c2jvrobhqxavomxze0mqkfi.lambda-url.us-east-1.on.aws/"
 
     def __init__(self, api_key):
         global _client
@@ -125,7 +125,9 @@ class AssemblyClient(APIClient):
         params = self._map_parameters(
             locals(), self.create_blueprint.actual_kwargs, BLUEPRINT_DEFINITION_ARG_MAP
         )
-        params["crowd_config"] = asdict(crowd_config)
+        if crowd_config:
+            params["crowd_config"] = asdict(crowd_config)
+
         post_response = self.post(url, data=params)
         return post_response
 
@@ -143,7 +145,10 @@ class AssemblyClient(APIClient):
             self.put_blueprint.actual_kwargs,
             BLUEPRINT_DEFINITION_ARG_MAP,
         )
-        params["crowd_config"] = asdict(crowd_config)
+
+        if crowd_config:
+            params["crowd_config"] = asdict(crowd_config)
+
         return self.put(url, data=params)
 
     def add_task_as_gold(self, task_id):
