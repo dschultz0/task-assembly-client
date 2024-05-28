@@ -1,3 +1,5 @@
+from __future__ import annotations
+from pprint import pprint
 import mimetypes
 from codecs import encode
 from apiclient import (
@@ -7,6 +9,7 @@ from apiclient import (
 )
 from apiclient.request_formatters import NoOpRequestFormatter
 from .utils import BLUEPRINT_DEFINITION_ARG_MAP, BATCH_DEFINITION_ARG_MAP
+from dataclasses import dataclass, asdict
 
 # TODO: Fix this simplified approach for caching the client
 _client: "AssemblyClient" = None
@@ -20,8 +23,48 @@ def _arg_decorator(function):
     return inner
 
 
-class AssemblyClient(APIClient):
+@dataclass
+class CrowdConfig:
+    service: str = None
+    title: str = None
+    description: str = None
+    reward_cents: int = None
+    assignment_duration_seconds: int = None
+    lifetime_seconds: int = None
+    default_assignments: int = None
+    max_assignments: int = None
+    auto_approval_delay: int = None
+    keywords: str = None
 
+    @staticmethod
+    def configure_crowd(
+        service=None,
+        title=None,
+        description=None,
+        reward_cents=None,
+        assignment_duration_seconds=None,
+        lifetime_seconds=None,
+        default_assignments=None,
+        max_assignments=None,
+        auto_approval_delay=None,
+        keywords=None,
+    ) -> CrowdConfig:
+        crowd_config = CrowdConfig(
+            service=service,
+            title=title,
+            description=description,
+            reward_cents=reward_cents,
+            assignment_duration_seconds=assignment_duration_seconds,
+            lifetime_seconds=lifetime_seconds,
+            default_assignments=default_assignments,
+            max_assignments=max_assignments,
+            auto_approval_delay=auto_approval_delay,
+            keywords=keywords,
+        )
+        return crowd_config
+
+
+class AssemblyClient(APIClient):
     # TODO get this url directly from lambda
     ENDPOINT = "https://qdlb4szcaoqni3l5ubyghxclym0obhoe.lambda-url.us-east-1.on.aws/"
 
@@ -68,68 +111,6 @@ class AssemblyClient(APIClient):
         )
 
         post_response = self.post(url, data=params)
-
-        dataList = []
-        boundary = "wL36Yn8afVp8Ag7AmP8qZ0SA4n1v9T"
-
-        dataList.append(encode("--" + boundary))
-        dataList.append(encode("Content-Disposition: form-data; name=key;"))
-        dataList.append(encode("Content-Type: {}".format("text/plain")))
-        dataList.append(encode(""))
-        dataList.append(encode(post_response["url"]["fields"]["key"]))
-
-        dataList.append(encode("--" + boundary))
-        dataList.append(encode("Content-Disposition: form-data; name=AWSAccessKeyId;"))
-        dataList.append(encode("Content-Type: {}".format("text/plain")))
-        dataList.append(encode(""))
-        dataList.append(encode(post_response["url"]["fields"]["AWSAccessKeyId"]))
-
-        dataList.append(encode("--" + boundary))
-        dataList.append(
-            encode("Content-Disposition: form-data; name=x-amz-security-token;")
-        )
-        dataList.append(encode("Content-Type: {}".format("text/plain")))
-        dataList.append(encode(""))
-        dataList.append(encode(post_response["url"]["fields"]["x-amz-security-token"]))
-
-        dataList.append(encode("--" + boundary))
-        dataList.append(encode("Content-Disposition: form-data; name=policy;"))
-        dataList.append(encode("Content-Type: {}".format("text/plain")))
-        dataList.append(encode(""))
-        dataList.append(encode(post_response["url"]["fields"]["policy"]))
-
-        dataList.append(encode("--" + boundary))
-        dataList.append(encode("Content-Disposition: form-data; name=signature;"))
-        dataList.append(encode("Content-Type: {}".format("text/plain")))
-        dataList.append(encode(""))
-        dataList.append(encode(post_response["url"]["fields"]["signature"]))
-
-        dataList.append(encode("--" + boundary))
-        dataList.append(
-            encode(
-                "Content-Disposition: form-data; name=file; filename={0}".format(
-                    file_name
-                )
-            )
-        )
-        fileType = mimetypes.guess_type(file_name)[0] or "application/octet-stream"
-        dataList.append(encode("Content-Type: {}".format(fileType)))
-        dataList.append(encode(""))
-
-        with open(file_name, "rb") as f:
-            dataList.append(f.read())
-        dataList.append(encode("--" + boundary + "--"))
-        dataList.append(encode(""))
-        body = b"\r\n".join(dataList)
-
-        headers = {"Content-type": "multipart/form-data; boundary={}".format(boundary)}
-
-        #   Upload file
-        file_e = post_response["url"]["url"]
-        file_f = body
-        self.set_request_formatter(NoOpRequestFormatter)
-        print(self.post(file_e, data=file_f, headers=headers))
-
         return post_response
 
     @_arg_decorator
@@ -137,23 +118,14 @@ class AssemblyClient(APIClient):
         self,
         name,
         task_template=None,
-        crowdconfig_service=None,
-        crowdconfig_title=None,
-        crowdconfig_description=None,
-        crowdconfig_reward_cents=None,
-        crowdconfig_assignment_duration_seconds=None,
-        crowdconfig_lifetime_seconds=None,
-        crowdconfig_default_assignments=None,
-        crowdconfig_max_assignments=None,
-        crowdconfig_auto_approval_delay=None,
-        crowdconfig_keywords=None,
+        crowd_config: CrowdConfig = None,
         render_handler_arn=None,
     ):
         url = self.ENDPOINT + "/blueprint"
         params = self._map_parameters(
             locals(), self.create_blueprint.actual_kwargs, BLUEPRINT_DEFINITION_ARG_MAP
         )
-
+        params["crowd_config"] = asdict(crowd_config)
         post_response = self.post(url, data=params)
         return post_response
 
@@ -162,16 +134,7 @@ class AssemblyClient(APIClient):
         self,
         name=None,
         task_template=None,
-        crowdconfig_service=None,
-        crowdconfig_title=None,
-        crowdconfig_description=None,
-        crowdconfig_reward_cents=None,
-        crowdconfig_assignment_duration_seconds=None,
-        crowdconfig_lifetime_seconds=None,
-        crowdconfig_default_assignments=None,
-        crowdconfig_max_assignments=None,
-        crowdconfig_auto_approval_delay=None,
-        crowdconfig_keywords=None,
+        crowd_config: CrowdConfig = None,
         render_handler_arn=None,
     ):
         url = self.ENDPOINT + "/blueprint"
@@ -180,6 +143,7 @@ class AssemblyClient(APIClient):
             self.put_blueprint.actual_kwargs,
             BLUEPRINT_DEFINITION_ARG_MAP,
         )
+        params["crowd_config"] = asdict(crowd_config)
         return self.put(url, data=params)
 
     def add_task_as_gold(self, task_id):

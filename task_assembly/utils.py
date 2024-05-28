@@ -1,5 +1,7 @@
 import uuid
 import warnings
+import mimetypes
+from codecs import encode
 from collections.abc import MutableMapping
 from html import escape
 
@@ -11,20 +13,8 @@ BATCH_DEFINITION_ARG_MAP = {
 
 BLUEPRINT_DEFINITION_ARG_MAP = {
     "name": "name",
-    "task_template": "taskTemplate",
-    "render_handler_arn": "renderHandlerArn",
-    "crowdConfig": {
-        "crowdconfig_service": "service",
-        "crowdconfig_title": "title",
-        "crowdconfig_description": "description",
-        "crowdconfig_reward_cents": "rewardCents",
-        "crowdconfig_assignment_duration_seconds": "assignmentDurationSeconds",
-        "crowdconfig_lifetime_seconds": "lifetimeSeconds",
-        "crowdconfig_default_assignments": "defaultAssignments",
-        "crowdconfig_max_assignments": "maxAssignments",
-        "crowdconfig_auto_approval_delay": "autoApprovalDelay",
-        "crowdconfig_keywords": "keywords",
-    },
+    "task_template": "task_template",
+    "render_handler_arn": "render_handler_arn",
 }
 
 TASK_DEFINITION_ARG_MAP = {
@@ -127,3 +117,65 @@ def flatten_dict(
 REV_BLUEPRINT_DEFINITION_ARG_MAP = {
     v: k for k, v in flatten_dict(BLUEPRINT_DEFINITION_ARG_MAP).items()
 }
+
+
+def upload_file(post_response, file_name):
+    dataList = []
+    boundary = "wL36Yn8afVp8Ag7AmP8qZ0SA4n1v9T"
+
+    dataList.append(encode("--" + boundary))
+    dataList.append(encode("Content-Disposition: form-data; name=key;"))
+    dataList.append(encode("Content-Type: {}".format("text/plain")))
+    dataList.append(encode(""))
+    dataList.append(encode(post_response["url"]["fields"]["key"]))
+
+    dataList.append(encode("--" + boundary))
+    dataList.append(encode("Content-Disposition: form-data; name=AWSAccessKeyId;"))
+    dataList.append(encode("Content-Type: {}".format("text/plain")))
+    dataList.append(encode(""))
+    dataList.append(encode(post_response["url"]["fields"]["AWSAccessKeyId"]))
+
+    dataList.append(encode("--" + boundary))
+    dataList.append(
+        encode("Content-Disposition: form-data; name=x-amz-security-token;")
+    )
+    dataList.append(encode("Content-Type: {}".format("text/plain")))
+    dataList.append(encode(""))
+    dataList.append(encode(post_response["url"]["fields"]["x-amz-security-token"]))
+
+    dataList.append(encode("--" + boundary))
+    dataList.append(encode("Content-Disposition: form-data; name=policy;"))
+    dataList.append(encode("Content-Type: {}".format("text/plain")))
+    dataList.append(encode(""))
+    dataList.append(encode(post_response["url"]["fields"]["policy"]))
+
+    dataList.append(encode("--" + boundary))
+    dataList.append(encode("Content-Disposition: form-data; name=signature;"))
+    dataList.append(encode("Content-Type: {}".format("text/plain")))
+    dataList.append(encode(""))
+    dataList.append(encode(post_response["url"]["fields"]["signature"]))
+
+    dataList.append(encode("--" + boundary))
+    dataList.append(
+        encode(
+            "Content-Disposition: form-data; name=file; filename={0}".format(file_name)
+        )
+    )
+    fileType = mimetypes.guess_type(file_name)[0] or "application/octet-stream"
+    dataList.append(encode("Content-Type: {}".format(fileType)))
+    dataList.append(encode(""))
+
+    with open(file_name, "rb") as f:
+        dataList.append(f.read())
+    dataList.append(encode("--" + boundary + "--"))
+    dataList.append(encode(""))
+    body = b"\r\n".join(dataList)
+
+    headers = {"Content-type": "multipart/form-data; boundary={}".format(boundary)}
+
+    #   Upload file
+    file_e = post_response["url"]["url"]
+    file_f = body
+    return {"url": file_e, "body": file_f, "headers": headers}
+    # self.set_request_formatter(NoOpRequestFormatter)
+    # print(self.post(file_e, data=file_f, headers=headers))

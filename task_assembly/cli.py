@@ -29,7 +29,7 @@ class CLI:
         return definition_
 
     def example(self):
-        files = ["batch.csv", "gold.json", "handlers.py", "template.html"]
+        files = ["batch.csv", "gold.json", "old_handlers.py", "template.html"]
         for file in files:
             shutil.copy(resource_filename(__name__, f"example/{file}"), os.getcwd())
         print(f"The files {files} have been added to the current directory")
@@ -190,16 +190,7 @@ def main():
     cblue_parser = subparsers.add_parser("create_blueprint")
     cblue_parser.add_argument("--name", type=str)
     cblue_parser.add_argument("--render_handler_arn", type=str)
-    cblue_parser.add_argument("--service", type=str)
-    cblue_parser.add_argument("--title", type=str)
-    cblue_parser.add_argument("--description", type=str)
-    cblue_parser.add_argument("--reward_cents", type=int)
-    cblue_parser.add_argument("--assignment_duration_seconds", type=int)
-    cblue_parser.add_argument("--lifetime_seconds", type=int)
-    cblue_parser.add_argument("--default_assignments", type=int)
-    cblue_parser.add_argument("--max_assignments", type=int)
-    cblue_parser.add_argument("--auto_approval_delay", type=int)
-    cblue_parser.add_argument("--keywords", type=str)
+    cblue_parser.add_argument("--task_template", type=str)
     cblue_parser.set_defaults(func=CLI.create_blueprint)
 
     cbatch_parser = subparsers.add_parser("create_batch")

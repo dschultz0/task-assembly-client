@@ -191,7 +191,7 @@ function `process_response` simply retrieves the `numberAsText` form field and r
 project adding the following to our `definition.json`:
 
 ```yaml
-HandlerFile: handlers.py
+HandlerFile: old_handlers.py
 SubmissionHandlers:
 - Name:  value
   FunctionName:  process_response
@@ -234,7 +234,7 @@ which will prompt Task Assembly to ask an additional Worker to provide a respons
 this function to our task definition, we simply include the following in our `definition.json`.
 
 ```yaml
-HandlerFile: handlers.py
+HandlerFile: old_handlers.py
 SubmissionHandlers:
 - Name:  value
   FunctionName:  process_response
