@@ -28,7 +28,6 @@ BLUEPRINT_DEFINITION_ARG_MAP = {
     "result_template_uri": "resultTemplateUri",
     "response_template_uri": "responseTemplateUri",
     "account_id": "accountId",
-    "blueprint_id": "blueprintId",
 }
 REV_BLUEPRINT_DEFINITION_ARG_MAP = {
     v: k for k, v in BLUEPRINT_DEFINITION_ARG_MAP.items()

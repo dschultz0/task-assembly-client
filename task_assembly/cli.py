@@ -139,7 +139,7 @@ class CLI:
             with open(definition_file, "w") as fp:
                 yaml.dump(blueprint, fp)
         else:
-            print(yaml.dump(blueprint), indent=4)
+            print(yaml.dump(blueprint))
 
     def get_blueprints(self):
         print(json.dumps(self.client.get_blueprints(), indent=4))
