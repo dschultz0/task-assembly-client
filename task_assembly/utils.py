@@ -2,6 +2,23 @@ import uuid
 import warnings
 from html import escape
 
+BLUEPRINT_DEFINITION_ARG_MAP = {
+    "name": "name",
+    "state": "state",
+    "title": "title",
+    "description": "description",
+    "keywords": "keywords",
+    "assignment_duration_seconds": "assignmentDurationSeconds",
+    "lifetime_seconds": "lifetimeSeconds",
+    "default_assignments": "defaultAssignments",
+    "max_assignments": "maxAssignments",
+    "default_team_id": "defaultTeamId",
+    "template_uri": "templateUri",
+    "instructions_uri": "instructionsUri",
+    "result_template_uri": "resultTemplateUri",
+    "response_template_uri": "responseTemplateUri",
+}
+
 TASK_DEFINITION_ARG_MAP = {
     "definition_id": "DefinitionId",
     "name": "Name",
@@ -27,7 +44,7 @@ TASK_DEFINITION_ARG_MAP = {
     "handler_code": "HandlerCode",
     "gold_answers": "GoldAnswers",
     "test_policy": "TestPolicy",
-    "result_layout": "ResultLayout"
+    "result_layout": "ResultLayout",
 }
 REV_TASK_DEFINITION_ARG_MAP = {v: k for k, v in TASK_DEFINITION_ARG_MAP.items()}
 
