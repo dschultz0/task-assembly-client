@@ -192,16 +192,16 @@ def main():
     c_parser.add_argument("--validate", action="store_true")
 
     cb_task = subparsers.add_parser("create_batch")
-    cb_task.add_argument("--blueprint_id", type=str)
-    cb_task.add_argument("--account_id", type=str)
+    cb_task.add_argument("--blueprint_id", type=str, required=True)
+    cb_task.add_argument("--account_id", type=str, required=True)
     cb_task.set_defaults(func=CLI.create_batch)
 
     gb_parser = subparsers.add_parser("get_batches")
     gb_parser.set_defaults(func=CLI.get_batches)
 
     c_task = subparsers.add_parser("create_task")
-    c_task.add_argument("--blueprint_id", type=str)
-    c_task.add_argument("--team_id", type=str)
+    c_task.add_argument("--blueprint_id", type=str, required=True)
+    c_task.add_argument("--team_id", type=str, required=True)
     c_task.set_defaults(func=CLI.create_task)
 
     gt_parser = subparsers.add_parser("get_tasks")
