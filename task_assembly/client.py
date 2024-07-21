@@ -62,6 +62,12 @@ class AssemblyClient(APIClient):
         return self.post(url, data=params)
 
     @_arg_decorator
+    def get_tasks(self):
+        url = self.ENDPOINT + "/task"
+        params = self._map_parameters(locals(), self.get_tasks.actual_kwargs, {})
+        return self.get(url, params)
+
+    @_arg_decorator
     def create_blueprint(
         self,
         name,

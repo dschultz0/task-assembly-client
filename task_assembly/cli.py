@@ -116,6 +116,9 @@ class CLI:
     def get_blueprints(self):
         print(json.dumps(self.client.get_blueprints(), indent=4))
 
+    def get_tasks(self):
+        print(json.dumps(self.client.get_tasks(), indent=4))
+
 
 def load_config(ta_config, profile) -> str:
     if not ta_config.exists():
@@ -164,6 +167,9 @@ def main():
     c_task.add_argument("--blueprint_id", type=str)
     c_task.add_argument("--team_id", type=str)
     c_task.set_defaults(func=CLI.create_task)
+
+    gt_parser = subparsers.add_parser("get_tasks")
+    gt_parser.set_defaults(func=CLI.get_tasks)
 
     gtd_parser = subparsers.add_parser("get_blueprints")
     gtd_parser.set_defaults(func=CLI.get_blueprints)
