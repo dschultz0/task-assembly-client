@@ -134,7 +134,7 @@ class AssemblyClient(APIClient):
             self.update_blueprint.actual_kwargs,
             BLUEPRINT_DEFINITION_ARG_MAP,
         )
-        print(url)
+        print(params)
         return self.put(url, data=params)
 
 
