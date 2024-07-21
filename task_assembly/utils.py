@@ -2,6 +2,11 @@ import uuid
 import warnings
 from html import escape
 
+TASK_DEFINITION_ARG_MAP = {
+    "team_id": "teamId",
+    "blueprint_id": "blueprintId",
+}
+
 BLUEPRINT_DEFINITION_ARG_MAP = {
     "name": "name",
     "state": "state",
@@ -19,6 +24,7 @@ BLUEPRINT_DEFINITION_ARG_MAP = {
     "response_template_uri": "responseTemplateUri",
 }
 
+"""
 TASK_DEFINITION_ARG_MAP = {
     "definition_id": "DefinitionId",
     "name": "Name",
@@ -47,6 +53,8 @@ TASK_DEFINITION_ARG_MAP = {
     "result_layout": "ResultLayout",
 }
 REV_TASK_DEFINITION_ARG_MAP = {v: k for k, v in TASK_DEFINITION_ARG_MAP.items()}
+"""
+REV_TASK_DEFINITION_ARG_MAP = {}
 
 
 def display_iframe(url=None, html=None, width=None, height=600, frame_border=5):

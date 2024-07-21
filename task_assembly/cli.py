@@ -51,6 +51,12 @@ class CLI:
             f"The file {definition_file} has been migrated to {yaml_name}, you may delete the original json file"
         )
 
+    def create_task(self, blueprint_id=None, team_id=None):
+        params = {"blueprint_id": blueprint_id, "team_id": team_id}
+        task = self.client.create_task(**params)
+        print(task)
+        print(json.dumps(task, indent=4))
+
     def create_blueprint(
         self,
         name,
@@ -153,6 +159,11 @@ def main():
     c_parser.add_argument("--key_secret")
     c_parser.add_argument("--aws_profile")
     c_parser.add_argument("--validate", action="store_true")
+
+    c_task = subparsers.add_parser("create_task")
+    c_task.add_argument("--blueprint_id", type=str)
+    c_task.add_argument("--team_id", type=str)
+    c_task.set_defaults(func=CLI.create_task)
 
     gtd_parser = subparsers.add_parser("get_blueprints")
     gtd_parser.set_defaults(func=CLI.get_blueprints)

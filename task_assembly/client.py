@@ -5,7 +5,7 @@ from apiclient import (
     JsonResponseHandler,
     JsonRequestFormatter,
 )
-from .utils import BLUEPRINT_DEFINITION_ARG_MAP
+from .utils import BLUEPRINT_DEFINITION_ARG_MAP, TASK_DEFINITION_ARG_MAP
 
 # TODO: Fix this simplified approach for caching the client
 _client: "AssemblyClient" = None
@@ -52,6 +52,14 @@ class AssemblyClient(APIClient):
                     result[i] = parameters[k]
 
         return result
+
+    @_arg_decorator
+    def create_task(self, blueprint_id, team_id):
+        url = self.ENDPOINT + "/task"
+        params = self._map_parameters(
+            locals(), self.create_task.actual_kwargs, TASK_DEFINITION_ARG_MAP
+        )
+        return self.post(url, data=params)
 
     @_arg_decorator
     def create_blueprint(
