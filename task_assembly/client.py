@@ -5,7 +5,11 @@ from apiclient import (
     JsonResponseHandler,
     JsonRequestFormatter,
 )
-from .utils import BLUEPRINT_DEFINITION_ARG_MAP, TASK_DEFINITION_ARG_MAP
+from .utils import (
+    BLUEPRINT_DEFINITION_ARG_MAP,
+    TASK_DEFINITION_ARG_MAP,
+    REV_BLUEPRINT_DEFINITION_ARG_MAP,
+)
 
 # TODO: Fix this simplified approach for caching the client
 _client: "AssemblyClient" = None
@@ -93,10 +97,45 @@ class AssemblyClient(APIClient):
         return self.post(url, data=params)
 
     @_arg_decorator
+    def get_blueprint(self, id):
+        url = self.ENDPOINT + f"/blueprint/{id}"
+        params = self._map_parameters(locals(), self.get_blueprint.actual_kwargs, {})
+        return self.get(url, params)
+
+    @_arg_decorator
     def get_blueprints(self):
         url = self.ENDPOINT + "/blueprint"
         params = self._map_parameters(locals(), self.get_blueprints.actual_kwargs, {})
         return self.get(url, params)
+
+    @_arg_decorator
+    def update_blueprint(
+        self,
+        name,
+        state=None,
+        title=None,
+        description=None,
+        keywords=None,
+        assignment_duration_seconds=None,
+        lifetime_seconds=None,
+        default_assignments=None,
+        max_assignments=None,
+        default_team_id=None,
+        template_uri=None,
+        instructions_uri=None,
+        result_template_uri=None,
+        response_template_uri=None,
+        account_id=None,
+        blueprint_id=None,
+    ):
+        url = self.ENDPOINT + f"/blueprint/{blueprint_id}"
+        params = self._map_parameters(
+            locals(),
+            self.update_blueprint.actual_kwargs,
+            BLUEPRINT_DEFINITION_ARG_MAP,
+        )
+        print(url)
+        return self.put(url, data=params)
 
 
 """

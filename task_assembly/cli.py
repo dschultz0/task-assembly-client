@@ -18,7 +18,7 @@ from botocore.exceptions import ClientError
 from tabulate import tabulate
 
 from .client import AssemblyClient
-from .utils import REV_TASK_DEFINITION_ARG_MAP
+from .utils import REV_BLUEPRINT_DEFINITION_ARG_MAP, BLUEPRINT_DEFINITION_ARG_MAP
 
 #   General guidelines
 #   snake case for cli
@@ -113,6 +113,25 @@ class CLI:
             f"Created Blueprint {blueprint['created']['attribute_values']['blueprint_id']} in definition.yaml"
         )
 
+    @staticmethod
+    def read_definition(file_name):
+        with open(file_name, "r") as ffp:
+            definition_ = yaml.safe_load(ffp)
+        return definition_
+
+    def update_blueprint(self, definition_file):
+        definition = self.read_definition(definition_file)
+        self.client.update_blueprint(**definition)
+        print(f"Updated Blueprint {definition['blueprint_id']}")
+
+    def get_blueprint(self, id, definition_file=None):
+        blueprint = self.client.get_blueprint(id)
+        if definition_file:
+            with open(definition_file, "w") as fp:
+                yaml.dump(blueprint, fp)
+        else:
+            print(yaml.dump(blueprint), indent=4)
+
     def get_blueprints(self):
         print(json.dumps(self.client.get_blueprints(), indent=4))
 
@@ -174,8 +193,13 @@ def main():
     gtd_parser = subparsers.add_parser("get_blueprints")
     gtd_parser.set_defaults(func=CLI.get_blueprints)
 
+    gts_parser = subparsers.add_parser("get_blueprint")
+    gts_parser.add_argument("id", type=str)
+    gts_parser.add_argument("--definition_file", type=str)
+    gts_parser.set_defaults(func=CLI.get_blueprint)
+
     ct_parser = subparsers.add_parser("create_blueprint")
-    ct_parser.add_argument("--name", type=str)
+    ct_parser.add_argument("--name", type=str, required=True)
     ct_parser.add_argument("--title", type=str)
     ct_parser.add_argument("--state", type=str)
     ct_parser.add_argument("--description", type=str)
@@ -190,6 +214,10 @@ def main():
     ct_parser.add_argument("--result_template_uri", type=str)
     ct_parser.add_argument("--response_template_uri", type=str)
     ct_parser.set_defaults(func=CLI.create_blueprint)
+
+    utd_parser = subparsers.add_parser("update_blueprint")
+    utd_parser.add_argument("--definition_file", default="definition.yaml")
+    utd_parser.set_defaults(func=CLI.update_blueprint)
 
     args = parser.parse_args()
 
