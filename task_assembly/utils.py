@@ -2,6 +2,11 @@ import uuid
 import warnings
 from html import escape
 
+BATCH_DEFINITION_ARG_MAP = {
+    "account_id": "accountId",
+    "blueprint_id": "blueprintId",
+}
+
 TASK_DEFINITION_ARG_MAP = {
     "team_id": "teamId",
     "blueprint_id": "blueprintId",

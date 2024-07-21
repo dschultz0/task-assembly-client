@@ -51,6 +51,15 @@ class CLI:
             f"The file {definition_file} has been migrated to {yaml_name}, you may delete the original json file"
         )
 
+    def create_batch(self, blueprint_id=None, account_id=None):
+        params = {"blueprint_id": blueprint_id, "account_id": account_id}
+        task = self.client.create_batch(**params)
+        print(task)
+        print(json.dumps(task, indent=4))
+
+    def get_batches(self):
+        print(json.dumps(self.client.get_batches(), indent=4))
+
     def create_task(self, blueprint_id=None, team_id=None):
         params = {"blueprint_id": blueprint_id, "team_id": team_id}
         task = self.client.create_task(**params)
@@ -181,6 +190,14 @@ def main():
     c_parser.add_argument("--key_secret")
     c_parser.add_argument("--aws_profile")
     c_parser.add_argument("--validate", action="store_true")
+
+    cb_task = subparsers.add_parser("create_batch")
+    cb_task.add_argument("--blueprint_id", type=str)
+    cb_task.add_argument("--account_id", type=str)
+    cb_task.set_defaults(func=CLI.create_batch)
+
+    gb_parser = subparsers.add_parser("get_batches")
+    gb_parser.set_defaults(func=CLI.get_batches)
 
     c_task = subparsers.add_parser("create_task")
     c_task.add_argument("--blueprint_id", type=str)

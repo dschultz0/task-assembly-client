@@ -8,7 +8,7 @@ from apiclient import (
 from .utils import (
     BLUEPRINT_DEFINITION_ARG_MAP,
     TASK_DEFINITION_ARG_MAP,
-    REV_BLUEPRINT_DEFINITION_ARG_MAP,
+    BATCH_DEFINITION_ARG_MAP,
 )
 
 # TODO: Fix this simplified approach for caching the client
@@ -54,8 +54,21 @@ class AssemblyClient(APIClient):
                     parameters[k] is not None or k in actual_kwargs
                 ):
                     result[i] = parameters[k]
-
         return result
+
+    @_arg_decorator
+    def create_batch(self, blueprint_id, account_id):
+        url = self.ENDPOINT + "/batch"
+        params = self._map_parameters(
+            locals(), self.create_batch.actual_kwargs, BATCH_DEFINITION_ARG_MAP
+        )
+        return self.post(url, data=params)
+
+    @_arg_decorator
+    def get_batches(self):
+        url = self.ENDPOINT + "/batch"
+        params = self._map_parameters(locals(), self.get_batches.actual_kwargs, {})
+        return self.get(url, params)
 
     @_arg_decorator
     def create_task(self, blueprint_id, team_id):
