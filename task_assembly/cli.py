@@ -51,11 +51,11 @@ class CLI:
             f"The file {definition_file} has been migrated to {yaml_name}, you may delete the original json file"
         )
 
-    def create_batch(self, blueprint_id=None, account_id=None):
+    def create_batch(self, blueprint_id=None, account_id=None, file_path=None):
         params = {"blueprint_id": blueprint_id, "account_id": account_id}
         task = self.client.create_batch(**params)
-        print(task)
         print(json.dumps(task, indent=4))
+        print(f"Uploading file ${file_path}")
 
     def get_batches(self):
         print(json.dumps(self.client.get_batches(), indent=4))
@@ -194,6 +194,7 @@ def main():
     cb_task = subparsers.add_parser("create_batch")
     cb_task.add_argument("--blueprint_id", type=str, required=True)
     cb_task.add_argument("--account_id", type=str, required=True)
+    cb_task.add_argument("--file_path", type=str, required=True)
     cb_task.set_defaults(func=CLI.create_batch)
 
     gb_parser = subparsers.add_parser("get_batches")

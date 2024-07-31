@@ -118,3 +118,62 @@ def display_link(url, prefix):
             prefix, url
         )
     )
+
+def upload_file(post_response, file_name):
+    dataList = []
+    boundary = "wL36Yn8afVp8Ag7AmP8qZ0SA4n1v9T"
+
+    dataList.append(encode("--" + boundary))
+    dataList.append(encode("Content-Disposition: form-data; name=key;"))
+    dataList.append(encode("Content-Type: {}".format("text/plain")))
+    dataList.append(encode(""))
+    dataList.append(encode(post_response["url"]["fields"]["key"]))
+
+    dataList.append(encode("--" + boundary))
+    dataList.append(encode("Content-Disposition: form-data; name=AWSAccessKeyId;"))
+    dataList.append(encode("Content-Type: {}".format("text/plain")))
+    dataList.append(encode(""))
+    dataList.append(encode(post_response["url"]["fields"]["AWSAccessKeyId"]))
+
+    dataList.append(encode("--" + boundary))
+    dataList.append(
+        encode("Content-Disposition: form-data; name=x-amz-security-token;")
+    )
+    dataList.append(encode("Content-Type: {}".format("text/plain")))
+    dataList.append(encode(""))
+    dataList.append(encode(post_response["url"]["fields"]["x-amz-security-token"]))
+
+    dataList.append(encode("--" + boundary))
+    dataList.append(encode("Content-Disposition: form-data; name=policy;"))
+    dataList.append(encode("Content-Type: {}".format("text/plain")))
+    dataList.append(encode(""))
+    dataList.append(encode(post_response["url"]["fields"]["policy"]))
+
+    dataList.append(encode("--" + boundary))
+    dataList.append(encode("Content-Disposition: form-data; name=signature;"))
+    dataList.append(encode("Content-Type: {}".format("text/plain")))
+    dataList.append(encode(""))
+    dataList.append(encode(post_response["url"]["fields"]["signature"]))
+
+    dataList.append(encode("--" + boundary))
+    dataList.append(
+        encode(
+            "Content-Disposition: form-data; name=file; filename={0}".format(file_name)
+        )
+    )
+    fileType = mimetypes.guess_type(file_name)[0] or "application/octet-stream"
+    dataList.append(encode("Content-Type: {}".format(fileType)))
+    dataList.append(encode(""))
+
+    with open(file_name, "rb") as f:
+        dataList.append(f.read())
+    dataList.append(encode("--" + boundary + "--"))
+    dataList.append(encode(""))
+    body = b"\r\n".join(dataList)
+
+    headers = {"Content-type": "multipart/form-data; boundary={}".format(boundary)}
+
+    #   Upload file
+    file_e = post_response["url"]["url"]
+    file_f = body
+    return {"url": file_e, "body": file_f, "headers": headers}
