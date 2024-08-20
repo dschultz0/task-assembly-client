@@ -7,8 +7,10 @@ from pathlib import Path
 from pkg_resources import resource_filename
 import shutil
 from datetime import datetime
+from .utils import prepare_file_upload
 
 import larry as lry
+import requests
 import argparse
 import toml
 import yaml
@@ -55,7 +57,13 @@ class CLI:
         params = {"blueprint_id": blueprint_id, "account_id": account_id}
         task = self.client.create_batch(**params)
         print(json.dumps(task, indent=4))
-        print(f"Uploading file ${file_path}")
+
+        print(f"Uploading file {file_path} for batch")
+
+        f_dict = prepare_file_upload(task, file_name=file_path)
+        requests.post(url=f_dict["url"], data=f_dict["body"], headers=f_dict["headers"])
+
+        print(f"Uploaded file {file_path} for batch")
 
     def get_batches(self):
         print(json.dumps(self.client.get_batches(), indent=4))

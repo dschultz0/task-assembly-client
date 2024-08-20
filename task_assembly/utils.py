@@ -1,6 +1,8 @@
 import uuid
 import warnings
+from codecs import encode
 from html import escape
+import mimetypes
 
 BATCH_DEFINITION_ARG_MAP = {
     "account_id": "accountId",
@@ -119,7 +121,8 @@ def display_link(url, prefix):
         )
     )
 
-def upload_file(post_response, file_name):
+
+def prepare_file_upload(post_response, file_name):
     dataList = []
     boundary = "wL36Yn8afVp8Ag7AmP8qZ0SA4n1v9T"
 
