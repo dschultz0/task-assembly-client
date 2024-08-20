@@ -161,7 +161,7 @@ from apiclient import (
     JsonRequestFormatter,
 )
 from urllib.parse import urlencode
-
+import typing
 from .handlers import create_consolidation_lambda
 from .utils import display_iframe, TASK_DEFINITION_ARG_MAP
 
@@ -378,7 +378,7 @@ class AssemblyClient(APIClient):
             sfn_token=None,
             qualification_requirements=None,
             use_computed_result=None,
-            tags: dict[str, str]=None
+            tags: typing.Dict[str, str]=None
     ):
         url = self.ENDPOINT + "/task/create"
         params = self._map_parameters(
@@ -439,6 +439,7 @@ class AssemblyClient(APIClient):
             sandbox=False,
             default_assignments=None,
             max_assignments=None,
+            qualification_requirements=None
     ):
         url = self.ENDPOINT + "/batch/submit"
         params = self._map_parameters(
@@ -452,6 +453,7 @@ class AssemblyClient(APIClient):
                 "sandbox": "Sandbox",
                 "default_assignments": "DefaultAssignments",
                 "max_assignments": "MaxAssignments",
+                "qualification_requirements": "QualificationRequirements"
             },
         )
         return self.post(url, data=params)["BatchId"]
@@ -479,6 +481,24 @@ class AssemblyClient(APIClient):
             locals(),
             self.redrive_task.actual_kwargs,
             {"task_id": "TaskId", "extend": "Extend"},
+        )
+        return self.post(url, data=params)
+
+    @_arg_decorator
+    def redrive_tasks(self, definition_id=None, tag_name=None, tag_value=None,
+                      start_datetime=None, end_datetime=None, extend=False):
+        url = self.ENDPOINT + "/definition/redrive"
+        params = self._map_parameters(
+            locals(),
+            self.redrive_tasks.actual_kwargs,
+            {
+                "definition_id": "DefinitionId",
+                "tag_name": "TagName",
+                "tag_value": "TagValue",
+                "start_datetime": "StartDatetime",
+                "end_datetime": "EndDatetime",
+                "extend": "Extend"
+            },
         )
         return self.post(url, data=params)
 
@@ -596,7 +616,9 @@ class AssemblyClient(APIClient):
             test_index: int = None,
             max_results: int = None,
             start_key=None,
-            include_detail: bool = None):
+            include_detail: bool = None,
+            tests_only: bool = None
+    ):
         params = self._map_parameters(
             locals(),
             self.list_assignments.actual_kwargs,
@@ -606,7 +628,8 @@ class AssemblyClient(APIClient):
                 "test_index": "TestIndex",
                 "max_results": "MaxResults",
                 "start_key": "StartKey",
-                "include_detail": "IncludeTaskDetail"
+                "include_detail": "IncludeTaskDetail",
+                "tests_only": "TestsOnly",
             },
         )
         return self.get(f"{self.ENDPOINT}/assignments", params)
@@ -617,12 +640,14 @@ class AssemblyClient(APIClient):
             worker_id=None,
             test_index: int = None,
             max_results: int = None,
-            include_detail: bool = None):
+            include_detail: bool = None,
+            tests_only: bool = None,
+    ):
         start_key = None
         complete = False
         while not complete:
             response = self.list_assignments(
-                definition_id, worker_id, test_index, max_results, start_key, include_detail
+                definition_id, worker_id, test_index, max_results, start_key, include_detail, tests_only
             )
             start_key = response.get("NextKey")
             if not start_key:
@@ -658,12 +683,28 @@ class AssemblyClient(APIClient):
         self.post(url, data=params)
 
     @_arg_decorator
-    def redrive_scoring(self, definition_id):
+    def reset_worker_score(
+            self, worker_id, definition_id, count=None
+    ):
+        url = self.ENDPOINT + "/worker/definition/resetscore"
+        params = self._map_parameters(
+            locals(),
+            self.reset_worker_score.actual_kwargs,
+            {
+                "worker_id": "WorkerId",
+                "definition_id": "DefinitionId",
+                "count": "Count",
+            },
+        )
+        self.post(url, data=params)
+
+    @_arg_decorator
+    def redrive_scoring(self, definition_id, redrive_submissions=False):
         url = self.ENDPOINT + "/taskDefinition/redriveScoring"
         params = self._map_parameters(
             locals(),
             self.redrive_scoring.actual_kwargs,
-            {"definition_id": "DefinitionId"},
+            {"definition_id": "DefinitionId", "redrive_submissions": "RedriveSubmissions"},
         )
         self.post(url, data=params)
 
