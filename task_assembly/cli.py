@@ -155,6 +155,16 @@ class CLI:
     def get_tasks(self):
         print(json.dumps(self.client.get_tasks(), indent=4))
 
+    def create_blueprint_asset(self, blueprint_id, name, kb=0):
+        params = {"blueprint_id": blueprint_id, "name": name}
+
+        if kb:
+            params["kb"] = kb
+
+        blueprint_asset = self.client.create_blueprint_asset(**params)
+        print(blueprint_asset)
+        print(f"Created Blueprint Asset")
+
 
 def load_config(ta_config, profile) -> str:
     if not ta_config.exists():
@@ -244,6 +254,11 @@ def main():
     utd_parser = subparsers.add_parser("update_blueprint")
     utd_parser.add_argument("--definition_file", default="definition.yaml")
     utd_parser.set_defaults(func=CLI.update_blueprint)
+
+    ba_parser = subparsers.add_parser("create_blueprint_asset")
+    ba_parser.add_argument("--blueprint_id", type=str, required=True)
+    ba_parser.add_argument("--name", type=str, required=True)
+    ba_parser.set_defaults(func=CLI.create_blueprint_asset)
 
     args = parser.parse_args()
 

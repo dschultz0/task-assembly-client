@@ -7,6 +7,7 @@ from apiclient import (
 )
 from .utils import (
     BLUEPRINT_DEFINITION_ARG_MAP,
+    BLUEPRINT_ASSET_DEFINITION_ARG_MAP,
     TASK_DEFINITION_ARG_MAP,
     BATCH_DEFINITION_ARG_MAP,
 )
@@ -149,6 +150,16 @@ class AssemblyClient(APIClient):
         )
         print(params)
         return self.put(url, data=params)
+
+    @_arg_decorator
+    def create_blueprint_asset(self, blueprint_id, name, kb=0):
+        url = self.ENDPOINT + "/blueprint_asset"
+        params = self._map_parameters(
+            locals(),
+            self.create_blueprint_asset.actual_kwargs,
+            BLUEPRINT_ASSET_DEFINITION_ARG_MAP,
+        )
+        return self.post(url, data=params)
 
 
 """
