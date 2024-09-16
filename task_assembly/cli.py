@@ -25,6 +25,9 @@ from .utils import REV_BLUEPRINT_DEFINITION_ARG_MAP, BLUEPRINT_DEFINITION_ARG_MA
 #   General guidelines
 #   snake case for cli
 
+CLIENT_ID = "qtX9ORUYq3CVEFVTTlHuSqB8miXu5Nmj"
+OAUTH_DOMAIN = "dev-task-assembly-1008.us.auth0.com"
+
 
 class CLI:
 
@@ -165,6 +168,64 @@ class CLI:
         print(json.dumps(blueprint_asset, indent=4))
         print(f"Created Blueprint Asset")
 
+    def login_flow(self):
+        print("Starting Login Flow...")
+        headers = {"content-type": "application/x-www-form-urlencoded"}
+        response = requests.post(
+            f"https://{OAUTH_DOMAIN}/oauth/device/code",
+            headers=headers,
+            data={"client_id": ("%s" % CLIENT_ID)},
+        )
+        json_response = response.json()
+        if "error" in json_response:
+            print(f"Error during login - {json_response['error_description']}")
+        else:
+            print(
+                f"Login to TaskAssembly using this link: {json_response['verification_uri_complete']}"
+            )
+            print(f"Your device code - {json_response['device_code']}")
+
+            with open("login.yaml", "w") as fp:
+                yaml.dump({"device_code": json_response["device_code"]}, fp)
+
+    def get_token(self):
+        print("Getting/Refreshing token...")
+        headers = {"content-type": "application/x-www-form-urlencoded"}
+
+        LOGIN_YAML = self.read_definition("login.yaml")
+
+        response = requests.post(
+            f"https://{OAUTH_DOMAIN}/oauth/token",
+            headers=headers,
+            data={
+                "client_id": ("%s" % CLIENT_ID),
+                "device_code": ("%s" % LOGIN_YAML["device_code"]),
+                "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+            },
+        )
+        json_response = response.json()
+        if "error" in json_response:
+            if json_response["error"] == "authorization_pending":
+                print(
+                    f"Error during get_token - Auth Pending - {json_response['error_description']}"
+                )
+            elif json_response["error"] == "slow_down":
+                print(
+                    f"Error during get_token - Too many requests - {json_response['error_description']}"
+                )
+            elif json_response["error"] == "expired_token":
+                print(
+                    f"Error during get_token - Expired Token - {json_response['error_description']}"
+                )
+            elif json_response["error"] == "access_denied":
+                print(
+                    f"Error during get_token - Access Denied - {json_response['error_description']}"
+                )
+            else:
+                print(f"Error during get_token - {json_response}")
+        else:
+            print(json_response)
+
 
 def load_config(ta_config, profile) -> str:
     if not ta_config.exists():
@@ -260,6 +321,12 @@ def main():
     ba_parser.add_argument("--name", type=str, required=True)
     ba_parser.add_argument("--kb", type=int)
     ba_parser.set_defaults(func=CLI.create_blueprint_asset)
+
+    login_parser = subparsers.add_parser("login")
+    login_parser.set_defaults(func=CLI.login_flow)
+
+    token_parser = subparsers.add_parser("get_token")
+    token_parser.set_defaults(func=CLI.get_token)
 
     args = parser.parse_args()
 
