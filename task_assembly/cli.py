@@ -7,8 +7,304 @@ from pathlib import Path
 from pkg_resources import resource_filename
 import shutil
 from datetime import datetime
-import typing
-from collections import defaultdict
+from .utils import prepare_file_upload
+
+import larry as lry
+import requests
+import argparse
+import toml
+import yaml
+import csv
+
+from botocore.exceptions import ClientError
+from tabulate import tabulate
+
+from .client import AssemblyClient
+from .utils import REV_BLUEPRINT_DEFINITION_ARG_MAP, BLUEPRINT_DEFINITION_ARG_MAP
+
+#   General guidelines
+#   snake case for cli
+
+
+class CLI:
+
+    def __init__(self, client: AssemblyClient):
+        self.client = client
+        self.delimiter_map = {
+            "tsv": "\t",
+            "csv": ",",
+            "txt": "\t",
+        }
+
+    def example(self):
+        files = ["batch.csv", "gold.json", "handlers.py", "template.html"]
+        for file in files:
+            shutil.copy(resource_filename(__name__, f"example/{file}"), os.getcwd())
+        print(f"The files {files} have been added to the current directory")
+
+    def migrate_yaml(self, definition_file="definition.json"):
+        base_name = os.path.splitext(definition_file)[0]
+        yaml_name = f"{base_name}.yaml"
+        with open(definition_file) as fp:
+            definition = json.load(fp)
+        with open(yaml_name, "w") as fp:
+            yaml.dump(definition, fp)
+        print(
+            f"The file {definition_file} has been migrated to {yaml_name}, you may delete the original json file"
+        )
+
+    def create_batch(self, blueprint_id=None, account_id=None, file_path=None):
+        params = {"blueprint_id": blueprint_id, "account_id": account_id}
+        task = self.client.create_batch(**params)
+        print(json.dumps(task, indent=4))
+
+        print(f"Uploading file {file_path} for batch")
+
+        f_dict = prepare_file_upload(task, file_name=file_path)
+        requests.post(url=f_dict["url"], data=f_dict["body"], headers=f_dict["headers"])
+
+        print(f"Uploaded file {file_path} for batch")
+
+    def get_batches(self):
+        print(json.dumps(self.client.get_batches(), indent=4))
+
+    def create_task(self, blueprint_id=None, team_id=None):
+        params = {"blueprint_id": blueprint_id, "team_id": team_id}
+        task = self.client.create_task(**params)
+        print(task)
+        print(json.dumps(task, indent=4))
+
+    def create_blueprint(
+        self,
+        name,
+        state=None,
+        title=None,
+        description=None,
+        keywords=None,
+        assignment_duration_seconds=None,
+        lifetime_seconds=None,
+        default_assignments=None,
+        max_assignments=None,
+        default_team_id=None,
+        template_uri=None,
+        instructions_uri=None,
+        result_template_uri=None,
+        response_template_uri=None,
+    ):
+
+        params = {"name": name}
+
+        if title:
+            params["title"] = title
+        if state:
+            params["state"] = state
+        if description:
+            params["description"] = description
+        if keywords:
+            params["keywords"] = keywords
+        if assignment_duration_seconds:
+            params["assignment_duration_seconds"] = assignment_duration_seconds
+        if lifetime_seconds:
+            params["lifetime_seconds"] = lifetime_seconds
+        if default_assignments:
+            params["default_assignments"] = default_assignments
+        if max_assignments:
+            params["max_assignments"] = max_assignments
+        if default_team_id:
+            params["default_team_id"] = default_team_id
+        if template_uri:
+            params["template_uri"] = template_uri
+        if instructions_uri:
+            params["instructions_uri"] = instructions_uri
+        if result_template_uri:
+            params["result_template_uri"] = result_template_uri
+        if response_template_uri:
+            params["response_template_uri"] = response_template_uri
+
+        blueprint = self.client.create_blueprint(**params)
+        print(blueprint)
+        with open("definition.yaml", "w") as fp:
+            yaml.dump(blueprint["created"]["attribute_values"], fp)
+        print(json.dumps(blueprint, indent=4))
+        print(
+            f"Created Blueprint {blueprint['created']['attribute_values']['blueprint_id']} in definition.yaml"
+        )
+
+    @staticmethod
+    def read_definition(file_name):
+        with open(file_name, "r") as ffp:
+            definition_ = yaml.safe_load(ffp)
+        return definition_
+
+    def update_blueprint(self, definition_file):
+        definition = self.read_definition(definition_file)
+        self.client.update_blueprint(**definition)
+        print(f"Updated Blueprint {definition['blueprint_id']}")
+
+    def get_blueprint(self, id, definition_file=None):
+        blueprint = self.client.get_blueprint(id)
+        if definition_file:
+            with open(definition_file, "w") as fp:
+                yaml.dump(blueprint, fp)
+        else:
+            print(yaml.dump(blueprint))
+
+    def get_blueprints(self):
+        print(json.dumps(self.client.get_blueprints(), indent=4))
+
+    def get_tasks(self):
+        print(json.dumps(self.client.get_tasks(), indent=4))
+
+
+def load_config(ta_config, profile) -> str:
+    if not ta_config.exists():
+        if os.path.exists("api-key.txt"):
+            with open("api-key.txt") as fp:
+                return fp.read().strip()
+        print("No configuration file found. Please run the 'configure' command first.")
+        exit(1)
+
+    with open(ta_config) as fp:
+        config = toml.load(fp)
+        profile_config = config.get(profile)
+    if not profile_config:
+        print(f"No configuration found for {profile} profile")
+        exit(1)
+    profile_credentials = profile_config["credentials"]
+    if profile_credentials.get("aws_profile"):
+        lry.set_session(profile_name=profile_credentials.get("aws_profile"))
+    api_key = None
+    if "api_key" in profile_credentials:
+        api_key = profile_credentials.get("api_key")
+    elif "api_key_secret" in profile_credentials:
+        sm = lry.session().client("secretsmanager")
+        response = sm.get_secret_value(SecretId=profile_credentials["api_key_secret"])
+        secret_value = response["SecretString"]
+        try:
+            secrets = json.loads(secret_value)
+            api_key = secrets["api_key"]
+        except:
+            api_key = secret_value
+    return api_key
+
+
+def main():
+    parser = argparse.ArgumentParser("Task Assembly CLI")
+    parser.add_argument("--profile")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    c_parser = subparsers.add_parser("configure")
+    c_parser.add_argument("--key")
+    c_parser.add_argument("--key_secret")
+    c_parser.add_argument("--aws_profile")
+    c_parser.add_argument("--validate", action="store_true")
+
+    cb_task = subparsers.add_parser("create_batch")
+    cb_task.add_argument("--blueprint_id", type=str, required=True)
+    cb_task.add_argument("--account_id", type=str, required=True)
+    cb_task.add_argument("--file_path", type=str, required=True)
+    cb_task.set_defaults(func=CLI.create_batch)
+
+    gb_parser = subparsers.add_parser("get_batches")
+    gb_parser.set_defaults(func=CLI.get_batches)
+
+    c_task = subparsers.add_parser("create_task")
+    c_task.add_argument("--blueprint_id", type=str, required=True)
+    c_task.add_argument("--team_id", type=str, required=True)
+    c_task.set_defaults(func=CLI.create_task)
+
+    gt_parser = subparsers.add_parser("get_tasks")
+    gt_parser.set_defaults(func=CLI.get_tasks)
+
+    gtd_parser = subparsers.add_parser("get_blueprints")
+    gtd_parser.set_defaults(func=CLI.get_blueprints)
+
+    gts_parser = subparsers.add_parser("get_blueprint")
+    gts_parser.add_argument("id", type=str)
+    gts_parser.add_argument("--definition_file", type=str)
+    gts_parser.set_defaults(func=CLI.get_blueprint)
+
+    ct_parser = subparsers.add_parser("create_blueprint")
+    ct_parser.add_argument("--name", type=str, required=True)
+    ct_parser.add_argument("--title", type=str)
+    ct_parser.add_argument("--state", type=str)
+    ct_parser.add_argument("--description", type=str)
+    ct_parser.add_argument("--keywords", type=str)
+    ct_parser.add_argument("--assignment_duration_seconds", type=int)
+    ct_parser.add_argument("--lifetime_seconds", type=int)
+    ct_parser.add_argument("--default_assignments", type=int)
+    ct_parser.add_argument("--max_assignments", type=int)
+    ct_parser.add_argument("--default_team_id", type=str)
+    ct_parser.add_argument("--template_uri", type=str)
+    ct_parser.add_argument("--instructions_uri", type=str)
+    ct_parser.add_argument("--result_template_uri", type=str)
+    ct_parser.add_argument("--response_template_uri", type=str)
+    ct_parser.set_defaults(func=CLI.create_blueprint)
+
+    utd_parser = subparsers.add_parser("update_blueprint")
+    utd_parser.add_argument("--definition_file", default="definition.yaml")
+    utd_parser.set_defaults(func=CLI.update_blueprint)
+
+    args = parser.parse_args()
+
+    ta_dir = Path.home().joinpath(".taskassembly")
+    ta_config = ta_dir.joinpath("config.toml")
+    profile = args.profile if args.profile else "default"
+
+    if args.command == "configure" and (
+        args.key or args.key_secret or args.aws_profile
+    ):
+        ta_dir.mkdir(exist_ok=True)
+        config = {"version": "0.1"}
+        if ta_config.exists():
+            with open(ta_config) as fp:
+                config = toml.load(fp)
+        if profile not in config:
+            config[profile] = {}
+        pf = config[profile]
+        if "credentials" not in pf:
+            pf["credentials"] = {}
+        creds = pf["credentials"]
+        if args.key:
+            creds["api_key"] = args.key
+        if args.key_secret:
+            creds["api_key_secret"] = args.key_secret
+        if args.aws_profile:
+            creds["aws_profile"] = args.aws_profile
+        with open(ta_config, "w") as fp:
+            toml.dump(config, fp)
+        if not args.validate:
+            exit(0)
+
+    api_key = load_config(ta_config, profile)
+
+    if api_key is None:
+        print("Missing api key value")
+        exit(1)
+
+    client = AssemblyClient(api_key)
+    cli = CLI(client)
+
+    if args.func:
+        arg_dict = dict(args._get_kwargs())
+        arg_dict.pop("func")
+        arg_dict.pop("command")
+        arg_dict.pop("profile")
+        args.func(cli, **arg_dict)
+    else:
+        raise Exception("Misformated command")
+
+
+"""
+import itertools
+import json
+import os.path
+import posixpath
+import sys
+from pathlib import Path
+from pkg_resources import resource_filename
+import shutil
+from datetime import datetime
 
 import larry as lry
 import argparse
@@ -131,19 +427,15 @@ class CLI:
         response = self.client.redrive_task(task_id, extend=extend)
         print(json.dumps(response, indent=4))
 
-    def submit_batch(self, definition_file, name, input_file, s3_uri_prefix, sandbox=False, assignments=None, quals=None):
+    def submit_batch(self, definition_file, name, input_file, s3_uri_prefix, sandbox=False, assignments=None):
         definition = self.read_definition(definition_file)
         name = name.replace(" ", "_")
         extension = os.path.splitext(input_file)[1][1:].lower()
-        if extension == "jsonl":
-            with open(input_file, encoding="utf-8-sig") as fp:
-                lines = [json.loads(line) for line in fp]
-        else:
-            delimiter = self.delimiter_map.get(extension)
-            if not delimiter:
-                raise Exception("Input file must have an extension of jsonl, csv, tsv, or txt")
-            with open(input_file, encoding="utf-8-sig") as fp:
-                lines = list(csv.DictReader(fp, delimiter=delimiter))
+        delimiter = self.delimiter_map.get(extension)
+        if not delimiter:
+            raise Exception("Input file must have an extension of csv, tsv, or txt")
+        with open(input_file, encoding="utf-8-sig") as fp:
+            lines = list(csv.DictReader(fp, delimiter=delimiter))
         input_uri = posixpath.join(s3_uri_prefix, f"{name}.jsonl")
         output_uri = posixpath.join(s3_uri_prefix, f"{name}_output.jsonl")
         lry.s3.write_as(lines, [dict], input_uri)
@@ -157,8 +449,6 @@ class CLI:
             params["sandbox"] = True
         if assignments:
             params["default_assignments"] = assignments
-        if quals:
-            params["qualification_requirements"] = json.loads(quals)
         batch_id = self.client.submit_batch(**params)
         print(f"A batch with id {batch_id} has been created")
         print(f"Results will be written to {output_uri}")
@@ -268,34 +558,10 @@ class CLI:
                     worker["Score"] = round(worker["Points"]/worker["ScoredCount"], 1)
                 writer.writerow(worker)
 
-    def redrive_tasks(self,
-                      definition_file=None,
-                      tag: typing.List[str] = None,
-                      start: str = None,
-                      end: str = None,
-                      extend: bool = False,
-                      task_definition_id: str = None):
-        def_id = None
-        if os.path.exists(definition_file):
-            def_id = task_definition_id if task_definition_id else self.read_definition(definition_file)["DefinitionId"]
-        params = {
-            "definition_id": def_id,
-            "extend": extend
-        }
-        if tag:
-            params["tag_name"] = tag[0]
-            params["tag_value"] = tag[1]
-        if start:
-            params["start_datetime"] = start
-        if end:
-            params["end_datetime"] = end
-
-        self.client.redrive_tasks(**params)
-
     def list_tasks(self,
                    output_file,
                    definition_file=None,
-                   tag: typing.List[str] = None,
+                   tag: list[str] = None,
                    batch_id=None,
                    task_definition_id=None,
                    max_results=None):
@@ -313,104 +579,25 @@ class CLI:
             sys.exit(-1)
         if max_results:
             tasks = itertools.islice(tasks, max_results)
-        tasks = list(tasks)
-        field_names = ['TaskId', 'ResponseCount', 'State', 'Stats', 'Definition', 'Errors',
-                       'Batch', 'ExtendRequested','IncompleteDetail', 'QualificationRequirements',
-                       'UseComputedResult', 'TestResponseCount']
-        additional_keys = set()
-        for t in tasks:
-            for k, v in list(t.items()):
-                if isinstance(v, dict):
-                    for kk, vv in v.items():
-                        key = f"{k}.{kk}"
-                        t[key] = vv
-                        additional_keys.add(key)
-                    del t[k]
-                if k in ["Data", "HITs", "Assignments", "Result", "Responses", "Stats"]:
-                    del t[k]
-        field_names.extend(sorted(list(additional_keys)))
         with open(output_file, "w", newline="", encoding="utf-8") as fp:
-            writer = csv.DictWriter(fp, fieldnames=field_names)
+            writer = csv.DictWriter(fp, fieldnames=['TaskId', 'ResponseCount',
+                        'State', 'Stats', 'Definition', 'Errors', 'Batch', 'ExtendRequested','IncompleteDetail',
+                        'QualificationRequirements', 'TaskFeeCents', 'TestRewardCents', 'TaskRewardCents',
+                        'TestFeeCents', 'UseComputedResult', 'TestResponseCount', 'Tag',])
             # Data	HITs	Assignments	Result	Sandbox	Responses
             writer.writeheader()
             for task in tasks:
+                task.pop("Data", None)
+                task.pop("HITs", None)
+                task.pop("Assignments", None)
+                task.pop("Result", None)
+                task.pop("Responses", None)
+                task.pop("Stats", None)
+                spend = task.pop("Spend", None)
+                if spend:
+                    for k, v in spend.items():
+                        task[k] = v
                 writer.writerow(task)
-
-    def reset_worker_score(self,
-                           worker_id=None,
-                           definition_file=None,
-                           definition_id=None):
-        def_id = self.get_definition_id(definition_file, definition_id)
-        if def_id is None:
-            print("Missing definition id or file")
-            sys.exit(-1)
-        self.client.reset_worker_score(worker_id, def_id)
-
-    def list_assignments(self,
-                         output_file: str,
-                         definition_file=None,
-                         definition_id=None,
-                         worker_id=None,
-                         test_index=None,
-                         tests=None,
-                         max_results=None):
-        def_id = self.get_definition_id(definition_file, definition_id)
-        if def_id is None:
-            print("Missing definition id or file")
-            sys.exit(-1)
-        if tests:
-            gold = self.get_gold_file(definition_file)
-            all_assignments = []
-            for i in range(len(gold)):
-                assignments = self.client.iter_assignments(def_id, worker_id=worker_id, test_index=i)
-                all_assignments.extend(list(assignments))
-            assignments = all_assignments
-        else:
-            assignments = self.client.iter_assignments(def_id, worker_id=worker_id, test_index=test_index)
-            if max_results:
-                assignments = itertools.islice(assignments, max_results)
-            assignments = list(assignments)
-        if output_file.endswith(".jsonl"):
-            with open(output_file, "w", encoding="utf-8") as fp:
-                fp.writelines([json.dumps(a) + "\n" for a in assignments])
-        else:
-            field_order = ['TaskId', 'AssignmentId', 'WorkerId', 'Accepted', 'Submitted', 'Answer', 'Result', 'Excluded', 'TestData', 'Score']
-            field_map = defaultdict(set)
-            compound_fields = ['Answer', 'TestData']
-            records = []
-            for a in assignments:
-                record = {}
-                for f in field_order:
-                    if f in a:
-                        value = a[f]
-                        if f in compound_fields and isinstance(value, dict):
-                            for k, v in value.items():
-                                key = f"{f}.{k}"
-                                record[key] = v
-                                field_map[f].add(key)
-                        elif f == "Result" and isinstance(value, dict):
-                            base_key = list(value.keys())[0]
-                            if isinstance(value[base_key], dict):
-                                for k, v in value[base_key].items():
-                                    key = f"{f}.{base_key}.{k}"
-                                    record[key] = v
-                                    field_map[f].add(key)
-                            else:
-                                key = f"{f}.{base_key}"
-                                record[key] = value[base_key]
-                                field_map[f].add(key)
-                        else:
-                            record[f] = value
-                            field_map[f].add(f)
-                # truncate any values greater than 32760 characters (the Excel max)
-                record = {k: str(v) if len(str(v)) < 32760 else f"{str(v)[:32750]}..." for k, v in record.items()}
-                records.append(record)
-            field_names = [f for fs in field_map.values() for f in fs]
-            with open(output_file, "w", newline="", encoding="utf-8") as fp:
-                writer = csv.DictWriter(fp, fieldnames=field_names)
-                writer.writeheader()
-                for r in records:
-                    writer.writerow(r)
 
     def close_testing(self, definition_file, min_score=None):
         definition = self.read_definition(definition_file)
@@ -494,9 +681,9 @@ class CLI:
                 table.append(row)
             print(tabulate(table, headers=list(fields.values())))
 
-    def redrive_scoring(self, definition_file, redrive_submissions=False):
+    def redrive_scoring(self, definition_file):
         definition = self.read_definition(definition_file)
-        self.client.redrive_scoring(definition["DefinitionId"], redrive_submissions)
+        self.client.redrive_scoring(definition["DefinitionId"])
 
     def stop_batch(self, batch_id):
         self.client.expire_batch(batch_id)
@@ -507,46 +694,11 @@ class CLI:
     def resolve_batch(self, batch_id, extend):
         self.client.resolve_batch(batch_id, extend)
 
-    def render_template(self, definition_file, gold_index=0):
-        definition = self.read_definition(definition_file)
-        gold_file = definition.get("GoldAnswersFile")
-        if not gold_file:
-            print("No GoldAnswersFile specified in the task definition")
-            sys.exit(-1)
-        with open(gold_file) as fp:
-            gold = json.load(fp)
-        data = gold[gold_index]["Data"]
-        rendered = self.client.render_task(definition["DefinitionId"], data)
-        with open("template_rendered.html", "w") as fp:
-            fp.write(rendered)
-
-    def gather_test_statistics(self, definition_file, output_file):
-        print("UNDER DEVELOPMENT...")
-
     @staticmethod
     def read_definition(file_name):
         with open(file_name, "r") as ffp:
             definition_ = yaml.safe_load(ffp)
         return definition_
-
-    @staticmethod
-    def get_gold_file(definition_file_name):
-        definition = CLI.read_definition(definition_file_name)
-        gold_file = definition.get("GoldAnswersFile")
-        if not gold_file:
-            print("No GoldAnswersFile specified in the task definition")
-            sys.exit(-1)
-        with open(gold_file) as fp:
-            return json.load(fp)
-
-    @staticmethod
-    def get_definition_id(file_name, definition_id=None):
-        if definition_id:
-            return definition_id
-        elif os.path.exists(file_name):
-            return CLI.read_definition(file_name)["DefinitionId"]
-        else:
-            raise None
 
     def _write_output_file(self, results, output_file, field_order):
         ext = os.path.splitext(output_file)[1][1:].lower()
@@ -696,7 +848,6 @@ def main():
     sb_parser.add_argument("--definition_file", default="definition.yaml")
     sb_parser.add_argument("--sandbox", action="store_true")
     sb_parser.add_argument("--assignments", type=int)
-    sb_parser.add_argument("--quals", type=str)
     sb_parser.add_argument("name")
     sb_parser.add_argument("input_file")
     sb_parser.add_argument("s3_uri_prefix")
@@ -734,24 +885,6 @@ def main():
     lt_parser.add_argument("--max_results", type=int)
     lt_parser.set_defaults(func=CLI.list_tasks)
 
-    rts_parser = subparsers.add_parser("redrive_tasks")
-    rts_parser.add_argument("--definition_file", default="definition.yaml")
-    rts_parser.add_argument("--tag", nargs=2)
-    rts_parser.add_argument("--start")
-    rts_parser.add_argument("--end")
-    rts_parser.add_argument("--extend", action="store_true")
-    rts_parser.set_defaults(func=CLI.redrive_tasks)
-
-    la_parser = subparsers.add_parser("list_assignments")
-    la_parser.add_argument("--definition_file", default="definition.yaml")
-    la_parser.add_argument("--definition_id")
-    la_parser.add_argument("output_file")
-    la_parser.add_argument("--worker_id")
-    la_parser.add_argument("--test_index", type=int)
-    la_parser.add_argument("--tests", action="store_true")
-    la_parser.add_argument("--max_results", type=int)
-    la_parser.set_defaults(func=CLI.list_assignments)
-
     clt_parser = subparsers.add_parser("close_testing")
     clt_parser.add_argument("--definition_file", default="definition.yaml")
     clt_parser.add_argument("--min_score", type=int)
@@ -765,7 +898,6 @@ def main():
 
     rds_parser = subparsers.add_parser("redrive_scoring")
     rds_parser.add_argument("--definition_file", default="definition.yaml")
-    rds_parser.add_argument("--redrive_submissions", action="store_true")
     rds_parser.set_defaults(func=CLI.redrive_scoring)
 
     rb_parser = subparsers.add_parser("redrive_batch")
@@ -777,22 +909,6 @@ def main():
     rsb_parser.add_argument("batch_id")
     rsb_parser.add_argument("--extend", action="store_true")
     rsb_parser.set_defaults(func=CLI.resolve_batch)
-
-    render_parser = subparsers.add_parser("render_template")
-    render_parser.add_argument("--definition_file", default="definition.yaml")
-    render_parser.add_argument("--gold_index", type=int, default=0)
-    render_parser.set_defaults(func=CLI.render_template)
-
-    gts_parser = subparsers.add_parser("gather_test_statistics")
-    gts_parser.add_argument("--definition_file", default="definition.yaml")
-    gts_parser.add_argument("--output_file", default="test_statistics.csv")
-    gts_parser.set_defaults(func=CLI.gather_test_statistics)
-
-    rws_parser = subparsers.add_parser("reset_worker_score")
-    rws_parser.add_argument("worker_id")
-    rws_parser.add_argument("--definition_file", default="definition.yaml")
-    rws_parser.add_argument("--definition_id")
-    rws_parser.set_defaults(func=CLI.reset_worker_score)
 
     args = parser.parse_args()
 
@@ -846,3 +962,5 @@ def main():
         args.func(cli, **arg_dict)
     else:
         raise Exception("Misformated command")
+
+"""

@@ -1,7 +1,41 @@
 import uuid
 import warnings
+from codecs import encode
 from html import escape
+import mimetypes
 
+BATCH_DEFINITION_ARG_MAP = {
+    "account_id": "accountId",
+    "blueprint_id": "blueprintId",
+}
+
+TASK_DEFINITION_ARG_MAP = {
+    "team_id": "teamId",
+    "blueprint_id": "blueprintId",
+}
+
+BLUEPRINT_DEFINITION_ARG_MAP = {
+    "name": "name",
+    "state": "state",
+    "title": "title",
+    "description": "description",
+    "keywords": "keywords",
+    "assignment_duration_seconds": "assignmentDurationSeconds",
+    "lifetime_seconds": "lifetimeSeconds",
+    "default_assignments": "defaultAssignments",
+    "max_assignments": "maxAssignments",
+    "default_team_id": "defaultTeamId",
+    "template_uri": "templateUri",
+    "instructions_uri": "instructionsUri",
+    "result_template_uri": "resultTemplateUri",
+    "response_template_uri": "responseTemplateUri",
+    "account_id": "accountId",
+}
+REV_BLUEPRINT_DEFINITION_ARG_MAP = {
+    v: k for k, v in BLUEPRINT_DEFINITION_ARG_MAP.items()
+}
+
+"""
 TASK_DEFINITION_ARG_MAP = {
     "definition_id": "DefinitionId",
     "name": "Name",
@@ -27,9 +61,11 @@ TASK_DEFINITION_ARG_MAP = {
     "handler_code": "HandlerCode",
     "gold_answers": "GoldAnswers",
     "test_policy": "TestPolicy",
-    "result_layout": "ResultLayout"
+    "result_layout": "ResultLayout",
 }
 REV_TASK_DEFINITION_ARG_MAP = {v: k for k, v in TASK_DEFINITION_ARG_MAP.items()}
+"""
+REV_TASK_DEFINITION_ARG_MAP = {}
 
 
 def display_iframe(url=None, html=None, width=None, height=600, frame_border=5):
@@ -84,3 +120,63 @@ def display_link(url, prefix):
             prefix, url
         )
     )
+
+
+def prepare_file_upload(post_response, file_name):
+    dataList = []
+    boundary = "wL36Yn8afVp8Ag7AmP8qZ0SA4n1v9T"
+
+    dataList.append(encode("--" + boundary))
+    dataList.append(encode("Content-Disposition: form-data; name=key;"))
+    dataList.append(encode("Content-Type: {}".format("text/plain")))
+    dataList.append(encode(""))
+    dataList.append(encode(post_response["url"]["fields"]["key"]))
+
+    dataList.append(encode("--" + boundary))
+    dataList.append(encode("Content-Disposition: form-data; name=AWSAccessKeyId;"))
+    dataList.append(encode("Content-Type: {}".format("text/plain")))
+    dataList.append(encode(""))
+    dataList.append(encode(post_response["url"]["fields"]["AWSAccessKeyId"]))
+
+    dataList.append(encode("--" + boundary))
+    dataList.append(
+        encode("Content-Disposition: form-data; name=x-amz-security-token;")
+    )
+    dataList.append(encode("Content-Type: {}".format("text/plain")))
+    dataList.append(encode(""))
+    dataList.append(encode(post_response["url"]["fields"]["x-amz-security-token"]))
+
+    dataList.append(encode("--" + boundary))
+    dataList.append(encode("Content-Disposition: form-data; name=policy;"))
+    dataList.append(encode("Content-Type: {}".format("text/plain")))
+    dataList.append(encode(""))
+    dataList.append(encode(post_response["url"]["fields"]["policy"]))
+
+    dataList.append(encode("--" + boundary))
+    dataList.append(encode("Content-Disposition: form-data; name=signature;"))
+    dataList.append(encode("Content-Type: {}".format("text/plain")))
+    dataList.append(encode(""))
+    dataList.append(encode(post_response["url"]["fields"]["signature"]))
+
+    dataList.append(encode("--" + boundary))
+    dataList.append(
+        encode(
+            "Content-Disposition: form-data; name=file; filename={0}".format(file_name)
+        )
+    )
+    fileType = mimetypes.guess_type(file_name)[0] or "application/octet-stream"
+    dataList.append(encode("Content-Type: {}".format(fileType)))
+    dataList.append(encode(""))
+
+    with open(file_name, "rb") as f:
+        dataList.append(f.read())
+    dataList.append(encode("--" + boundary + "--"))
+    dataList.append(encode(""))
+    body = b"\r\n".join(dataList)
+
+    headers = {"Content-type": "multipart/form-data; boundary={}".format(boundary)}
+
+    #   Upload file
+    file_e = post_response["url"]["url"]
+    file_f = body
+    return {"url": file_e, "body": file_f, "headers": headers}

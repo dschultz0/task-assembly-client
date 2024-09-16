@@ -1,3 +1,4 @@
+"""
 import sys
 import traceback
 import larry as lry
@@ -49,3 +50,4 @@ def consolidation(func):
             return {"error": e.args[0], "trace": trace}
 
     return consolidation_wrapper
+"""

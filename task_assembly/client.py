@@ -1,3 +1,157 @@
+import uuid
+
+from apiclient import (
+    APIClient,
+    JsonResponseHandler,
+    JsonRequestFormatter,
+)
+from .utils import (
+    BLUEPRINT_DEFINITION_ARG_MAP,
+    TASK_DEFINITION_ARG_MAP,
+    BATCH_DEFINITION_ARG_MAP,
+)
+
+# TODO: Fix this simplified approach for caching the client
+_client: "AssemblyClient" = None
+
+
+def _arg_decorator(function):
+    def inner(*args, **kwargs):
+        inner.actual_kwargs = kwargs
+        return function(*args, **kwargs)
+
+    return inner
+
+
+class AssemblyClient(APIClient):
+    # points to lambda
+    # a builder method to have the url would be appropriate
+    ENDPOINT = "https://a4oyk6di2brgy5x3kkpx2jroeu0jgvlm.lambda-url.us-east-1.on.aws"
+
+    def __init__(self, api_key):
+        global _client
+        super().__init__(
+            response_handler=JsonResponseHandler,
+            request_formatter=JsonRequestFormatter,
+        )
+        _client = self
+
+    @staticmethod
+    def _map_parameters(parameters, actual_kwargs, key_map):
+        result = {}
+        for k, i in key_map.items():
+            #   handles a nested dictionary
+            if isinstance(i, dict):
+                result[k] = {}
+                for kk, ii in i.items():
+                    if kk in parameters and (
+                        parameters[kk] is not None or kk in actual_kwargs
+                    ):
+                        result[k][ii] = parameters[kk]
+            else:
+                #   handles a flat value
+                if k in parameters and (
+                    parameters[k] is not None or k in actual_kwargs
+                ):
+                    result[i] = parameters[k]
+        return result
+
+    @_arg_decorator
+    def create_batch(self, blueprint_id, account_id):
+        url = self.ENDPOINT + "/batch"
+        params = self._map_parameters(
+            locals(), self.create_batch.actual_kwargs, BATCH_DEFINITION_ARG_MAP
+        )
+        return self.post(url, data=params)
+
+    @_arg_decorator
+    def get_batches(self):
+        url = self.ENDPOINT + "/batch"
+        params = self._map_parameters(locals(), self.get_batches.actual_kwargs, {})
+        return self.get(url, params)
+
+    @_arg_decorator
+    def create_task(self, blueprint_id, team_id):
+        url = self.ENDPOINT + "/task"
+        params = self._map_parameters(
+            locals(), self.create_task.actual_kwargs, TASK_DEFINITION_ARG_MAP
+        )
+        return self.post(url, data=params)
+
+    @_arg_decorator
+    def get_tasks(self):
+        url = self.ENDPOINT + "/task"
+        params = self._map_parameters(locals(), self.get_tasks.actual_kwargs, {})
+        return self.get(url, params)
+
+    @_arg_decorator
+    def create_blueprint(
+        self,
+        name,
+        state=None,
+        title=None,
+        description=None,
+        keywords=None,
+        assignment_duration_seconds=None,
+        lifetime_seconds=None,
+        default_assignments=None,
+        max_assignments=None,
+        default_team_id=None,
+        template_uri=None,
+        instructions_uri=None,
+        result_template_uri=None,
+        response_template_uri=None,
+    ):
+        url = self.ENDPOINT + "/blueprint"
+        params = self._map_parameters(
+            locals(), self.create_blueprint.actual_kwargs, BLUEPRINT_DEFINITION_ARG_MAP
+        )
+        params["accountId"] = str(uuid.uuid4())
+        return self.post(url, data=params)
+
+    @_arg_decorator
+    def get_blueprint(self, id):
+        url = self.ENDPOINT + f"/blueprint/{id}"
+        params = self._map_parameters(locals(), self.get_blueprint.actual_kwargs, {})
+        return self.get(url, params)
+
+    @_arg_decorator
+    def get_blueprints(self):
+        url = self.ENDPOINT + "/blueprint"
+        params = self._map_parameters(locals(), self.get_blueprints.actual_kwargs, {})
+        return self.get(url, params)
+
+    @_arg_decorator
+    def update_blueprint(
+        self,
+        name,
+        state=None,
+        title=None,
+        description=None,
+        keywords=None,
+        assignment_duration_seconds=None,
+        lifetime_seconds=None,
+        default_assignments=None,
+        max_assignments=None,
+        default_team_id=None,
+        template_uri=None,
+        instructions_uri=None,
+        result_template_uri=None,
+        response_template_uri=None,
+        account_id=None,
+        blueprint_id=None,
+    ):
+        url = self.ENDPOINT + f"/blueprint/{blueprint_id}"
+        params = self._map_parameters(
+            locals(),
+            self.update_blueprint.actual_kwargs,
+            BLUEPRINT_DEFINITION_ARG_MAP,
+        )
+        print(params)
+        return self.put(url, data=params)
+
+
+"""
 import io
 import json
 from apiclient import (
@@ -25,7 +179,6 @@ def _arg_decorator(function):
 
 
 class Task(dict):
-
     def __getitem__(self, item):
         global _client
         if item not in self:
@@ -108,7 +261,7 @@ class AssemblyClient(APIClient):
         _client = self
 
     def get_request_timeout(self) -> float:
-        """Extends the default timeout to 30 seconds for longer running actions"""
+        #Extends the default timeout to 30 seconds for longer running actions
         return 30.0
 
     @staticmethod
@@ -576,3 +729,4 @@ class AssemblyClient(APIClient):
         return create_consolidation_lambda(
             handler, name, role, imports, functions, files, layers, timeout
         )
+"""
