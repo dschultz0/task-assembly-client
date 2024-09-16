@@ -224,7 +224,8 @@ class CLI:
             else:
                 print(f"Error during get_token - {json_response}")
         else:
-            print(json_response)
+            with open("token.yaml", "w") as fp:
+                yaml.dump(json_response, fp)
 
 
 def load_config(ta_config, profile) -> str:
