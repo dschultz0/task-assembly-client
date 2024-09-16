@@ -27,7 +27,7 @@ def _arg_decorator(function):
 class AssemblyClient(APIClient):
     # points to lambda
     # a builder method to have the url would be appropriate
-    ENDPOINT = "https://a4oyk6di2brgy5x3kkpx2jroeu0jgvlm.lambda-url.us-east-1.on.aws"
+    ENDPOINT = "https://6tlw4klgmrtqkcumg5iwihe4sq0oztme.lambda-url.us-west-2.on.aws"
 
     def __init__(self, api_key):
         global _client

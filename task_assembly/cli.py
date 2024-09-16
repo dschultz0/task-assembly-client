@@ -162,7 +162,7 @@ class CLI:
             params["kb"] = kb
 
         blueprint_asset = self.client.create_blueprint_asset(**params)
-        print(blueprint_asset)
+        print(json.dumps(blueprint_asset, indent=4))
         print(f"Created Blueprint Asset")
 
 
@@ -258,6 +258,7 @@ def main():
     ba_parser = subparsers.add_parser("create_blueprint_asset")
     ba_parser.add_argument("--blueprint_id", type=str, required=True)
     ba_parser.add_argument("--name", type=str, required=True)
+    ba_parser.add_argument("--kb", type=int)
     ba_parser.set_defaults(func=CLI.create_blueprint_asset)
 
     args = parser.parse_args()
