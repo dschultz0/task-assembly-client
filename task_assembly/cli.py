@@ -167,7 +167,6 @@ class CLI:
         print(f"Created Blueprint Asset")
 
     def login_flow(self):
-        print("Starting Login Flow...")
         headers = {"content-type": "application/x-www-form-urlencoded"}
         response = requests.post(
             f"https://{OAUTH_DOMAIN}/oauth/device/code",
@@ -182,15 +181,10 @@ class CLI:
         if "error" in json_response:
             print(f"Error during login - {json_response['error_description']}")
         else:
-            print(f"Your device code - {json_response['device_code']}")
+            print(f"\nYour device code - {json_response['device_code']}")
             print(
-                f"Login to TaskAssembly using this link: {json_response['verification_uri_complete']}"
+                f"\n\nLogin through your webbrowser with this link: {json_response['verification_uri_complete']}\n"
             )
-
-            import webbrowser
-
-            webbrowser.open_new(json_response["verification_uri_complete"])
-
             with open("login.yaml", "w") as fp:
                 yaml.dump({"device_code": json_response["device_code"]}, fp)
 
