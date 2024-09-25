@@ -189,7 +189,7 @@ class CLI:
                 yaml.dump({"device_code": json_response["device_code"]}, fp)
 
     def get_token(self):
-        print("Getting/Refreshing token...")
+        print("\nGetting/Refreshing token...\n")
         headers = {"content-type": "application/x-www-form-urlencoded"}
 
         LOGIN_YAML = self.read_definition("login.yaml")
@@ -204,6 +204,8 @@ class CLI:
             },
         )
         json_response = response.json()
+
+        # TODO - Add better error messages from dave
         if "error" in json_response:
             if json_response["error"] == "authorization_pending":
                 print(
@@ -220,6 +222,10 @@ class CLI:
             elif json_response["error"] == "access_denied":
                 print(
                     f"Error during get_token - Access Denied - {json_response['error_description']}"
+                )
+            elif json_response["error"] == "invalid_grant":
+                print(
+                    f"Invalid or expired device code - use cli with login to generate device code\n"
                 )
             else:
                 print(f"Error during get_token - {json_response}")
