@@ -14,17 +14,15 @@ import requests
 import argparse
 import toml
 import yaml
-import csv
 
-from botocore.exceptions import ClientError
-from tabulate import tabulate
 
 from .client import AssemblyClient
-from .utils import REV_BLUEPRINT_DEFINITION_ARG_MAP, BLUEPRINT_DEFINITION_ARG_MAP
 
 #   General guidelines
 #   snake case for cli
 
+
+# TODO - CLIENT_ID has to come from a url - so we can change it
 CLIENT_ID = "qtX9ORUYq3CVEFVTTlHuSqB8miXu5Nmj"
 OAUTH_DOMAIN = "dev-task-assembly-1008.us.auth0.com"
 
@@ -174,16 +172,24 @@ class CLI:
         response = requests.post(
             f"https://{OAUTH_DOMAIN}/oauth/device/code",
             headers=headers,
-            data={"client_id": ("%s" % CLIENT_ID)},
+            data={
+                "client_id": ("%s" % CLIENT_ID),
+                "audience": "https://task-assembly-backend",
+                "scope": "offline_access",
+            },
         )
         json_response = response.json()
         if "error" in json_response:
             print(f"Error during login - {json_response['error_description']}")
         else:
+            print(f"Your device code - {json_response['device_code']}")
             print(
                 f"Login to TaskAssembly using this link: {json_response['verification_uri_complete']}"
             )
-            print(f"Your device code - {json_response['device_code']}")
+
+            import webbrowser
+
+            webbrowser.open_new(json_response["verification_uri_complete"])
 
             with open("login.yaml", "w") as fp:
                 yaml.dump({"device_code": json_response["device_code"]}, fp)
