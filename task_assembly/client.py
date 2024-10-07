@@ -1,4 +1,7 @@
 import uuid
+import requests
+import yaml
+import time, os
 
 from apiclient.authentication_methods import (
     HeaderAuthentication,
@@ -18,6 +21,11 @@ from .utils import (
 
 # TODO: Fix this simplified approach for caching the client
 _client: "AssemblyClient" = None
+
+# TODO - CLIENT_ID has to come from a url - so we can change it
+CLIENT_ID = "qtX9ORUYq3CVEFVTTlHuSqB8miXu5Nmj"
+OAUTH_DOMAIN = "dev-task-assembly-1008.us.auth0.com"
+REFRESH_TOKEN_LEWAY = 10
 
 
 def _arg_decorator(function):
@@ -52,6 +60,104 @@ class AssemblyClient(APIClient):
             request_formatter=JsonRequestFormatter,
         )
         _client = self
+
+    def get_token(self):
+        print("\nGetting/Refreshing token...\n")
+        headers = {"content-type": "application/x-www-form-urlencoded"}
+
+        #   Check if same token can be used or we can refresh
+        #   Reference from here - https://github.com/mlcommons/medperf/blob/main/cli/medperf/comms/auth/auth0.py#L198
+        if os.path.isfile("token.yaml"):
+            token_y = load_yaml("token.yaml")
+            absolute_expiration = token_y["token_issued_at"] + token_y["expires_in"]
+            refresh_possible_expiration = absolute_expiration - REFRESH_TOKEN_LEWAY
+
+            current_time = time.time()
+
+            if current_time < refresh_possible_expiration:
+                print("token unexpired - reusing")
+                return token_y["access_token"]
+
+            if current_time > absolute_expiration:
+                print("Token expired - please try login again")
+                return
+
+            print("Refreshing token")
+            response = requests.post(
+                f"https://{OAUTH_DOMAIN}/oauth/token",
+                headers=headers,
+                data={
+                    "client_id": ("%s" % CLIENT_ID),
+                    "grant_type": "refresh_token",
+                    "refresh_token": token_y["refresh_token"],
+                },
+            )
+        else:
+            login_yaml = load_yaml("login.yaml")
+
+            response = requests.post(
+                f"https://{OAUTH_DOMAIN}/oauth/token",
+                headers=headers,
+                data={
+                    "client_id": ("%s" % CLIENT_ID),
+                    "device_code": ("%s" % login_yaml["device_code"]),
+                    "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+                },
+            )
+
+        json_response = response.json()
+        json_response["token_issued_at"] = time.time()
+
+        # TODO - Add better error messages from dave
+        if "error" in json_response:
+            if json_response["error"] == "authorization_pending":
+                print(
+                    f"Error during get_token - Auth Pending - {json_response['error_description']}"
+                )
+            elif json_response["error"] == "slow_down":
+                print(
+                    f"Error during get_token - Too many requests - {json_response['error_description']}"
+                )
+            elif json_response["error"] == "expired_token":
+                print(
+                    f"Error during get_token - Expired Token - {json_response['error_description']}"
+                )
+            elif json_response["error"] == "access_denied":
+                print(
+                    f"Error during get_token - Access Denied - {json_response['error_description']}"
+                )
+            elif json_response["error"] == "invalid_grant":
+                print(
+                    f"Invalid or expired device code - use cli with login to generate device code\n"
+                )
+            else:
+                print(f"Error during get_token - {json_response}")
+        else:
+            with open("token.yaml", "w") as fp:
+                yaml.dump(json_response, fp)
+                return json_response["access_token"]
+
+    def do_login(self):
+        headers = {"content-type": "application/x-www-form-urlencoded"}
+        response = requests.post(
+            f"https://{OAUTH_DOMAIN}/oauth/device/code",
+            headers=headers,
+            data={
+                "client_id": ("%s" % CLIENT_ID),
+                "audience": "https://task-assembly-backend",
+                "scope": "offline_access",
+            },
+        )
+        json_response = response.json()
+        if "error" in json_response:
+            print(f"Error during login - {json_response['error_description']}")
+        else:
+            print(f"\nYour device code - {json_response['device_code']}")
+            print(
+                f"\n\nLogin through your webbrowser with this link: {json_response['verification_uri_complete']}\n"
+            )
+            with open("login.yaml", "w") as fp:
+                yaml.dump({"device_code": json_response["device_code"]}, fp)
 
     @staticmethod
     def _map_parameters(parameters, actual_kwargs, key_map):
@@ -130,13 +236,20 @@ class AssemblyClient(APIClient):
     def get_blueprint(self, id):
         url = self.ENDPOINT + f"/blueprint/{id}"
         params = self._map_parameters(locals(), self.get_blueprint.actual_kwargs, {})
-        return self.get(url, params)
+        headers = {"accept": "application/json"}
+
+        return self.get(url, params, headers)
 
     @_arg_decorator
     def get_blueprints(self):
-        url = self.ENDPOINT + "/blueprint"
+        url = f"{self.ENDPOINT}/blueprint"
+        access_token = self.get_token()
+        headers = {
+            "accept": "application/json",
+            "Authorization": f"Bearer {access_token}",
+        }
         params = self._map_parameters(locals(), self.get_blueprints.actual_kwargs, {})
-        return self.get(url, params)
+        return self.get(endpoint=url, params=params, headers=headers)
 
     @_arg_decorator
     def update_blueprint(

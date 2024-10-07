@@ -11,7 +11,6 @@ from datetime import datetime
 from .utils import prepare_file_upload, load_yaml
 
 import larry as lry
-import requests
 import argparse
 import toml
 import yaml
@@ -20,11 +19,6 @@ from .client import AssemblyClient
 
 #   General guidelines
 #   snake case for cli
-
-
-# TODO - CLIENT_ID has to come from a url - so we can change it
-CLIENT_ID = "qtX9ORUYq3CVEFVTTlHuSqB8miXu5Nmj"
-OAUTH_DOMAIN = "dev-task-assembly-1008.us.auth0.com"
 
 
 class CLI:
@@ -167,99 +161,7 @@ class CLI:
         print(f"Created Blueprint Asset")
 
     def login_flow(self):
-        headers = {"content-type": "application/x-www-form-urlencoded"}
-        response = requests.post(
-            f"https://{OAUTH_DOMAIN}/oauth/device/code",
-            headers=headers,
-            data={
-                "client_id": ("%s" % CLIENT_ID),
-                "audience": "https://task-assembly-backend",
-                "scope": "offline_access",
-            },
-        )
-        json_response = response.json()
-        if "error" in json_response:
-            print(f"Error during login - {json_response['error_description']}")
-        else:
-            print(f"\nYour device code - {json_response['device_code']}")
-            print(
-                f"\n\nLogin through your webbrowser with this link: {json_response['verification_uri_complete']}\n"
-            )
-            with open("login.yaml", "w") as fp:
-                yaml.dump({"device_code": json_response["device_code"]}, fp)
-
-    def get_token(self):
-        print("\nGetting/Refreshing token...\n")
-        headers = {"content-type": "application/x-www-form-urlencoded"}
-
-        #   Check if same token can be used or we can refresh
-        #   Reference from here - https://github.com/mlcommons/medperf/blob/main/cli/medperf/comms/auth/auth0.py#L198
-        if os.path.isfile("token.yaml"):
-            token_y = load_yaml("token.yaml")
-            absolute_expiration = token_y["token_issued_at"] + token_y["expires_in"]
-            refresh_possible_expiration = absolute_expiration - 100
-
-            current_time = time.time()
-
-            if current_time < refresh_possible_expiration:
-                return
-
-            if current_time > absolute_expiration:
-                print("Token expired - please try login again")
-                return
-
-            response = requests.post(
-                f"https://{OAUTH_DOMAIN}/oauth/token",
-                headers=headers,
-                data={
-                    "client_id": ("%s" % CLIENT_ID),
-                    "grant_type": "refresh_token",
-                    "refresh_token": token_y["refresh_token"],
-                },
-            )
-        else:
-            login_yaml = self.read_definition("login.yaml")
-
-            response = requests.post(
-                f"https://{OAUTH_DOMAIN}/oauth/token",
-                headers=headers,
-                data={
-                    "client_id": ("%s" % CLIENT_ID),
-                    "device_code": ("%s" % login_yaml["device_code"]),
-                    "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
-                },
-            )
-
-        json_response = response.json()
-        json_response["token_issued_at"] = time.time()
-
-        # TODO - Add better error messages from dave
-        if "error" in json_response:
-            if json_response["error"] == "authorization_pending":
-                print(
-                    f"Error during get_token - Auth Pending - {json_response['error_description']}"
-                )
-            elif json_response["error"] == "slow_down":
-                print(
-                    f"Error during get_token - Too many requests - {json_response['error_description']}"
-                )
-            elif json_response["error"] == "expired_token":
-                print(
-                    f"Error during get_token - Expired Token - {json_response['error_description']}"
-                )
-            elif json_response["error"] == "access_denied":
-                print(
-                    f"Error during get_token - Access Denied - {json_response['error_description']}"
-                )
-            elif json_response["error"] == "invalid_grant":
-                print(
-                    f"Invalid or expired device code - use cli with login to generate device code\n"
-                )
-            else:
-                print(f"Error during get_token - {json_response}")
-        else:
-            with open("token.yaml", "w") as fp:
-                yaml.dump(json_response, fp)
+        self.client.do_login()
 
 
 def load_config(ta_config, profile) -> str:
@@ -359,9 +261,6 @@ def main():
 
     login_parser = subparsers.add_parser("login")
     login_parser.set_defaults(func=CLI.login_flow)
-
-    token_parser = subparsers.add_parser("get_token")
-    token_parser.set_defaults(func=CLI.get_token)
 
     args = parser.parse_args()
 
