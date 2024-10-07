@@ -1,5 +1,8 @@
 import uuid
 
+from apiclient.authentication_methods import (
+    HeaderAuthentication,
+)
 from apiclient import (
     APIClient,
     JsonResponseHandler,
@@ -10,6 +13,7 @@ from .utils import (
     BLUEPRINT_ASSET_DEFINITION_ARG_MAP,
     TASK_DEFINITION_ARG_MAP,
     BATCH_DEFINITION_ARG_MAP,
+    load_yaml,
 )
 
 # TODO: Fix this simplified approach for caching the client
@@ -22,6 +26,18 @@ def _arg_decorator(function):
         return function(*args, **kwargs)
 
     return inner
+
+
+"""
+class Auth0Authentication(HeaderAuthentication):
+    def __init__(
+        self
+    ):
+
+        token_y = load_yaml("token.yaml")
+        access_token =
+        super().init(token=, parameter="Authorization", scheme="Bearer", extra=None)
+"""
 
 
 class AssemblyClient(APIClient):

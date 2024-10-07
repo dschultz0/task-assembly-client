@@ -1,5 +1,6 @@
 import itertools
 import json
+import time
 import os.path
 import posixpath
 import sys
@@ -7,14 +8,13 @@ from pathlib import Path
 from pkg_resources import resource_filename
 import shutil
 from datetime import datetime
-from .utils import prepare_file_upload
+from .utils import prepare_file_upload, load_yaml
 
 import larry as lry
 import requests
 import argparse
 import toml
 import yaml
-
 
 from .client import AssemblyClient
 
@@ -192,18 +192,46 @@ class CLI:
         print("\nGetting/Refreshing token...\n")
         headers = {"content-type": "application/x-www-form-urlencoded"}
 
-        LOGIN_YAML = self.read_definition("login.yaml")
+        #   Check if same token can be used or we can refresh
+        #   Reference from here - https://github.com/mlcommons/medperf/blob/main/cli/medperf/comms/auth/auth0.py#L198
+        if os.path.isfile("token.yaml"):
+            token_y = load_yaml("token.yaml")
+            absolute_expiration = token_y["token_issued_at"] + token_y["expires_in"]
+            refresh_possible_expiration = absolute_expiration - 100
 
-        response = requests.post(
-            f"https://{OAUTH_DOMAIN}/oauth/token",
-            headers=headers,
-            data={
-                "client_id": ("%s" % CLIENT_ID),
-                "device_code": ("%s" % LOGIN_YAML["device_code"]),
-                "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
-            },
-        )
+            current_time = time.time()
+
+            if current_time < refresh_possible_expiration:
+                return
+
+            if current_time > absolute_expiration:
+                print("Token expired - please try login again")
+                return
+
+            response = requests.post(
+                f"https://{OAUTH_DOMAIN}/oauth/token",
+                headers=headers,
+                data={
+                    "client_id": ("%s" % CLIENT_ID),
+                    "grant_type": "refresh_token",
+                    "refresh_token": token_y["refresh_token"],
+                },
+            )
+        else:
+            login_yaml = self.read_definition("login.yaml")
+
+            response = requests.post(
+                f"https://{OAUTH_DOMAIN}/oauth/token",
+                headers=headers,
+                data={
+                    "client_id": ("%s" % CLIENT_ID),
+                    "device_code": ("%s" % login_yaml["device_code"]),
+                    "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+                },
+            )
+
         json_response = response.json()
+        json_response["token_issued_at"] = time.time()
 
         # TODO - Add better error messages from dave
         if "error" in json_response:
