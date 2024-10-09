@@ -145,7 +145,12 @@ class CLI:
             print(yaml.dump(blueprint))
 
     def get_blueprints(self):
-        print(json.dumps(self.client.get_blueprints(), indent=4))
+        try:
+            response = self.client.get_blueprints()
+            if response:
+                print(json.dumps(response, indent=4))
+        except:
+            pass
 
     def get_tasks(self):
         print(json.dumps(self.client.get_tasks(), indent=4))

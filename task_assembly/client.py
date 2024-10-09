@@ -272,8 +272,9 @@ class AssemblyClient(APIClient):
 
         try:
             return self.get(endpoint=url, params=params, headers=headers)
-        except:
-            print("Exception during get_blueprints")
+        except Exception as exception:
+            print("Exception during get_blueprints..")
+            print(exception)
 
     @_arg_decorator
     def update_blueprint(
