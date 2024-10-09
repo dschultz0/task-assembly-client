@@ -260,12 +260,20 @@ class AssemblyClient(APIClient):
     def get_blueprints(self):
         url = f"{self.ENDPOINT}/blueprint"
         response = self.get_token()
+
+        if "error" in response:
+            raise Exception(f"Authentication Exception - {response['error']}")
+
         headers = {
             "accept": "application/json",
             "Authorization": f'Bearer {response["token"]}',
         }
         params = self._map_parameters(locals(), self.get_blueprints.actual_kwargs, {})
-        return self.get(endpoint=url, params=params, headers=headers)
+
+        try:
+            return self.get(endpoint=url, params=params, headers=headers)
+        except:
+            print("Exception during get_blueprints")
 
     @_arg_decorator
     def update_blueprint(
