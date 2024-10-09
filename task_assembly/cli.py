@@ -1,5 +1,6 @@
 import itertools
 import json
+import time
 import os.path
 import posixpath
 import sys
@@ -7,20 +8,14 @@ from pathlib import Path
 from pkg_resources import resource_filename
 import shutil
 from datetime import datetime
-from .utils import prepare_file_upload
+from .utils import prepare_file_upload, load_yaml
 
 import larry as lry
-import requests
 import argparse
 import toml
 import yaml
-import csv
-
-from botocore.exceptions import ClientError
-from tabulate import tabulate
 
 from .client import AssemblyClient
-from .utils import REV_BLUEPRINT_DEFINITION_ARG_MAP, BLUEPRINT_DEFINITION_ARG_MAP
 
 #   General guidelines
 #   snake case for cli
@@ -155,6 +150,19 @@ class CLI:
     def get_tasks(self):
         print(json.dumps(self.client.get_tasks(), indent=4))
 
+    def create_blueprint_asset(self, blueprint_id, name, kb=0):
+        params = {"blueprint_id": blueprint_id, "name": name}
+
+        if kb:
+            params["kb"] = kb
+
+        blueprint_asset = self.client.create_blueprint_asset(**params)
+        print(json.dumps(blueprint_asset, indent=4))
+        print(f"Created Blueprint Asset")
+
+    def login_flow(self):
+        self.client.do_login()
+
 
 def load_config(ta_config, profile) -> str:
     if not ta_config.exists():
@@ -244,6 +252,15 @@ def main():
     utd_parser = subparsers.add_parser("update_blueprint")
     utd_parser.add_argument("--definition_file", default="definition.yaml")
     utd_parser.set_defaults(func=CLI.update_blueprint)
+
+    ba_parser = subparsers.add_parser("create_blueprint_asset")
+    ba_parser.add_argument("--blueprint_id", type=str, required=True)
+    ba_parser.add_argument("--name", type=str, required=True)
+    ba_parser.add_argument("--kb", type=int)
+    ba_parser.set_defaults(func=CLI.create_blueprint_asset)
+
+    login_parser = subparsers.add_parser("login")
+    login_parser.set_defaults(func=CLI.login_flow)
 
     args = parser.parse_args()
 
