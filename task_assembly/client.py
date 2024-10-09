@@ -61,41 +61,53 @@ class AssemblyClient(APIClient):
         )
         _client = self
 
+    # TODO - needs refactoring - lots of returns
     def get_token(self):
+        response = {}
+
         print("\nGetting/Refreshing token...\n")
         headers = {"content-type": "application/x-www-form-urlencoded"}
 
         #   Check if same token can be used or we can refresh
         #   Reference from here - https://github.com/mlcommons/medperf/blob/main/cli/medperf/comms/auth/auth0.py#L198
         if os.path.isfile("token.yaml"):
-            token_y = load_yaml("token.yaml")
-            absolute_expiration = token_y["token_issued_at"] + token_y["expires_in"]
+            token_yaml = load_yaml("token.yaml")
+            absolute_expiration = (
+                token_yaml["token_issued_at"] + token_yaml["expires_in"]
+            )
             refresh_possible_expiration = absolute_expiration - REFRESH_TOKEN_LEWAY
 
             current_time = time.time()
 
             if current_time < refresh_possible_expiration:
-                print("token unexpired - reusing")
-                return token_y["access_token"]
+                print("Token unexpired - reusing")
+                response = {"token": token_yaml["access_token"]}
+
+                return response
 
             if current_time > absolute_expiration:
-                print("Token expired - please try login again")
-                return
+                print("Token expired - please login again")
+                os.remove("token.yaml")
 
-            print("Refreshing token")
-            response = requests.post(
+                response = {"error": "token expired"}
+
+                return response
+
+            print("using refresh token")
+            svc_response = requests.post(
                 f"https://{OAUTH_DOMAIN}/oauth/token",
                 headers=headers,
                 data={
                     "client_id": ("%s" % CLIENT_ID),
                     "grant_type": "refresh_token",
-                    "refresh_token": token_y["refresh_token"],
+                    "refresh_token": token_yaml["refresh_token"],
                 },
             )
         else:
             login_yaml = load_yaml("login.yaml")
 
-            response = requests.post(
+            print("requesting new token")
+            svc_response = requests.post(
                 f"https://{OAUTH_DOMAIN}/oauth/token",
                 headers=headers,
                 data={
@@ -105,11 +117,13 @@ class AssemblyClient(APIClient):
                 },
             )
 
-        json_response = response.json()
+        json_response = svc_response.json()
         json_response["token_issued_at"] = time.time()
 
         # TODO - Add better error messages from dave
         if "error" in json_response:
+            response["error"] = json_response["error"]
+
             if json_response["error"] == "authorization_pending":
                 print(
                     f"Error during get_token - Auth Pending - {json_response['error_description']}"
@@ -135,7 +149,9 @@ class AssemblyClient(APIClient):
         else:
             with open("token.yaml", "w") as fp:
                 yaml.dump(json_response, fp)
-                return json_response["access_token"]
+            response = {"token": json_response["access_token"]}
+
+        return response
 
     def do_login(self):
         headers = {"content-type": "application/x-www-form-urlencoded"}
@@ -243,10 +259,10 @@ class AssemblyClient(APIClient):
     @_arg_decorator
     def get_blueprints(self):
         url = f"{self.ENDPOINT}/blueprint"
-        access_token = self.get_token()
+        response = self.get_token()
         headers = {
             "accept": "application/json",
-            "Authorization": f"Bearer {access_token}",
+            "Authorization": f'Bearer {response["token"]}',
         }
         params = self._map_parameters(locals(), self.get_blueprints.actual_kwargs, {})
         return self.get(endpoint=url, params=params, headers=headers)
