@@ -1,5 +1,6 @@
 import uuid
 import warnings
+import yaml
 from codecs import encode
 from html import escape
 import mimetypes
@@ -31,6 +32,13 @@ BLUEPRINT_DEFINITION_ARG_MAP = {
     "response_template_uri": "responseTemplateUri",
     "account_id": "accountId",
 }
+
+BLUEPRINT_ASSET_DEFINITION_ARG_MAP = {
+    "blueprint_id": "blueprintId",
+    "name": "name",
+    "kb": "kb",
+}
+
 REV_BLUEPRINT_DEFINITION_ARG_MAP = {
     v: k for k, v in BLUEPRINT_DEFINITION_ARG_MAP.items()
 }
@@ -180,3 +188,9 @@ def prepare_file_upload(post_response, file_name):
     file_e = post_response["url"]["url"]
     file_f = body
     return {"url": file_e, "body": file_f, "headers": headers}
+
+
+def load_yaml(filename):
+    with open(filename, "r") as ffp:
+        definition_ = yaml.safe_load(ffp)
+    return definition_
