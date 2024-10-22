@@ -1,3 +1,4 @@
+import os
 import uuid
 import warnings
 import yaml
@@ -194,3 +195,10 @@ def load_yaml(filename):
     with open(filename, "r") as ffp:
         definition_ = yaml.safe_load(ffp)
     return definition_
+
+
+def remove_file(filename):
+    try:
+        os.remove(filename)
+    except OSError:
+        pass
