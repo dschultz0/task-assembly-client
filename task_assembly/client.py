@@ -167,6 +167,7 @@ class AssemblyClient(APIClient):
             data={
                 "client_id": ("%s" % CLIENT_ID),
                 "scope": "offline_access",
+                "audience": "https://hksfuaaglfnusssl77miemahni0yepqj.lambda-url.us-west-2.on.aws/",
             },
         )
         json_response = response.json()
@@ -175,7 +176,7 @@ class AssemblyClient(APIClient):
         else:
             print(f"\nYour device code - {json_response['device_code']}")
             console.print(
-                f"\n\nAuthenticate through our login page: [link={json_response['verification_uri_complete']}]here[/link]\n",
+                f"\n\nAuthenticate through our login page: [link={json_response['verification_uri_complete']}]{json_response['verification_uri_complete']}[/link]\n",
                 style="bright_cyan",
             )
             with open("login.yaml", "w") as fp:
