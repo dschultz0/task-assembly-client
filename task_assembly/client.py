@@ -17,14 +17,20 @@ from .utils import (
     TASK_DEFINITION_ARG_MAP,
     BATCH_DEFINITION_ARG_MAP,
     load_yaml,
+    remove_file,
 )
+
+from rich import print
+from rich.console import Console
+
+console = Console()
 
 # TODO: Fix this simplified approach for caching the client
 _client: "AssemblyClient" = None
 
 # TODO - CLIENT_ID has to come from a url - so we can change it
-CLIENT_ID = "qtX9ORUYq3CVEFVTTlHuSqB8miXu5Nmj"
-OAUTH_DOMAIN = "dev-task-assembly-1008.us.auth0.com"
+CLIENT_ID = "yQMDigaAK60R0iJamI6wowr9PhlZOGDS"
+OAUTH_DOMAIN = "dev-ta5favhgjjiu5swh.us.auth0.com"
 REFRESH_TOKEN_LEWAY = 10
 
 
@@ -51,7 +57,7 @@ class Auth0Authentication(HeaderAuthentication):
 class AssemblyClient(APIClient):
     # points to lambda
     # a builder method to have the url would be appropriate
-    ENDPOINT = "https://6tlw4klgmrtqkcumg5iwihe4sq0oztme.lambda-url.us-west-2.on.aws"
+    ENDPOINT = "https://hksfuaaglfnusssl77miemahni0yepqj.lambda-url.us-west-2.on.aws"
 
     def __init__(self, api_key):
         global _client
@@ -160,8 +166,8 @@ class AssemblyClient(APIClient):
             headers=headers,
             data={
                 "client_id": ("%s" % CLIENT_ID),
-                "audience": "https://task-assembly-backend",
                 "scope": "offline_access",
+                "audience": "https://hksfuaaglfnusssl77miemahni0yepqj.lambda-url.us-west-2.on.aws/",
             },
         )
         json_response = response.json()
@@ -169,11 +175,13 @@ class AssemblyClient(APIClient):
             print(f"Error during login - {json_response['error_description']}")
         else:
             print(f"\nYour device code - {json_response['device_code']}")
-            print(
-                f"\n\nLogin through your webbrowser with this link: {json_response['verification_uri_complete']}\n"
+            console.print(
+                f"\n\nAuthenticate through our login page: [link={json_response['verification_uri_complete']}]{json_response['verification_uri_complete']}[/link]\n",
+                style="bright_cyan",
             )
             with open("login.yaml", "w") as fp:
                 yaml.dump({"device_code": json_response["device_code"]}, fp)
+                remove_file("token.yaml")
 
     @staticmethod
     def _map_parameters(parameters, actual_kwargs, key_map):
@@ -272,8 +280,9 @@ class AssemblyClient(APIClient):
 
         try:
             return self.get(endpoint=url, params=params, headers=headers)
-        except:
-            print("Exception during get_blueprints")
+        except Exception as exception:
+            print("Exception during get_blueprints..")
+            print(exception)
 
     @_arg_decorator
     def update_blueprint(
