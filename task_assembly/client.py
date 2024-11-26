@@ -57,7 +57,7 @@ class Auth0Authentication(HeaderAuthentication):
 class AssemblyClient(APIClient):
     # points to lambda
     # a builder method to have the url would be appropriate
-    ENDPOINT = "https://hksfuaaglfnusssl77miemahni0yepqj.lambda-url.us-west-2.on.aws"
+    ENDPOINT = "https://hsjzjhy5ctmhz7gglz4mhaxohi0xxgqe.lambda-url.us-west-2.on.aws"
 
     def __init__(self, api_key):
         global _client
@@ -249,20 +249,39 @@ class AssemblyClient(APIClient):
         result_template_uri=None,
         response_template_uri=None,
     ):
+        token_response = self.get_token()
+
+        if "error" in token_response:
+            raise Exception(f"Authentication Exception - {token_response['error']}")
+
+        headers = {
+            "accept": "application/json",
+            "Authorization": f'Bearer {token_response["token"]}',
+        }
+
         url = self.ENDPOINT + "/blueprint"
         params = self._map_parameters(
             locals(), self.create_blueprint.actual_kwargs, BLUEPRINT_DEFINITION_ARG_MAP
         )
         params["accountId"] = str(uuid.uuid4())
-        return self.post(url, data=params)
+        return self.post(url, data=params, headers=headers)
 
     @_arg_decorator
     def get_blueprint(self, id):
+        token_response = self.get_token()
+
+        if "error" in token_response:
+            raise Exception(f"Authentication Exception - {token_response['error']}")
+
+        headers = {
+            "accept": "application/json",
+            "Authorization": f'Bearer {token_response["token"]}',
+        }
+
         url = self.ENDPOINT + f"/blueprint/{id}"
         params = self._map_parameters(locals(), self.get_blueprint.actual_kwargs, {})
-        headers = {"accept": "application/json"}
 
-        return self.get(url, params, headers)
+        return self.get(url, data=params, headers=headers)
 
     @_arg_decorator
     def get_blueprints(self):
