@@ -4,20 +4,19 @@ import json
 parser = ResolvingParser("schema.json")
 schemas = parser.specification["components"]["schemas"]
 
-type_replace = {
-    "string": "str",
-    "integer": "int",
-    "boolean": "bool",
-    "null": "None"
-}
+type_replace = {"string": "str", "integer": "int", "boolean": "bool", "null": "None"}
 
-schema = json.loads('{"properties": {"blueprintId": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Blueprintid"}, "assetId": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Assetid"}, "name": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Name"}, "state": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "State"}, "uri": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Uri"}, "kb": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "Kb", "default": 0}}, "type": "object", "title": "BlueprintAssetResponse"}')
+schema = json.loads(
+    '{"properties": {"blueprintId": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Blueprintid"}, "assetId": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Assetid"}, "name": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Name"}, "state": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "State"}, "uri": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Uri"}, "kb": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "Kb", "default": 0}}, "type": "object", "title": "BlueprintAssetResponse"}'
+)
+
 
 def parse_object(schema):
     if "type" in schema and schema["type"] == "object":
         print("object")
         return schema["title"] if "title" in schema else "object"
     return False
+
 
 def parse_array(schema):
     if "type" in schema and schema["type"] == "array":
@@ -26,6 +25,7 @@ def parse_array(schema):
         type_str = parse_object(items) or parse_anyof(items) or parse_type(items)
         return "List[" + type_str + "]"
     return False
+
 
 def parse_anyof(schema):
     if "anyOf" in schema:
@@ -39,6 +39,7 @@ def parse_anyof(schema):
             type_str.append(parse_object(item) or parse_array(item) or parse_type(item))
         return " | ".join(type_str)
     return False
+
 
 def parse_type(schema):
     if "type" in schema:
@@ -56,16 +57,21 @@ def parse_type(schema):
             return "bool"
     return False
 
+
 for fqn, schema in schemas.items():
     if fqn == "BlueprintRequest" or True:
         print("fqn = {0}".format(fqn))
         properties = schema["properties"]
         print(properties)
 
+        param_with_type = []
         for property_name in properties.keys():
             print("parsing property - {}".format(property_name))
+
             property_bag = properties[property_name]
-            print(parse_anyof(property_bag) or parse_type(property_bag))
+            arg_str = parse_anyof(property_bag) or parse_type(property_bag)
+            param_with_type.append("{}: {}".format(property_name, arg_str))
+        print(", ".join(param_with_type))
 
 """
 def parse_type(argument, script):
