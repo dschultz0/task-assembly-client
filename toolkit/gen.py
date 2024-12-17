@@ -13,14 +13,12 @@ schema = json.loads(
 
 def parse_object(schema):
     if "type" in schema and schema["type"] == "object":
-        print("object")
         return schema["title"] if "title" in schema else "object"
     return False
 
 
 def parse_array(schema):
     if "type" in schema and schema["type"] == "array":
-        print("array")
         items = schema["items"]
         type_str = parse_object(items) or parse_anyof(items) or parse_type(items)
         return "List[" + type_str + "]"
@@ -29,13 +27,11 @@ def parse_array(schema):
 
 def parse_anyof(schema):
     if "anyOf" in schema:
-        print("anyOf")
         any_of_array = schema["anyOf"]
         type_str = []
         for item in any_of_array:
             if len(item) == 0:
                 continue
-            print("parsing {}".format(item))
             type_str.append(parse_object(item) or parse_array(item) or parse_type(item))
         return " | ".join(type_str)
     return False
@@ -44,34 +40,27 @@ def parse_anyof(schema):
 def parse_type(schema):
     if "type" in schema:
         if schema["type"] == "string":
-            print("str")
             return "str"
         elif schema["type"] == "integer":
-            print("int")
             return "int"
         elif schema["type"] == "null":
-            print("None")
             return "None"
         elif schema["type"] == "boolean":
-            print("bool")
             return "bool"
     return False
 
 
 for fqn, schema in schemas.items():
     if fqn == "BlueprintRequest" or True:
-        print("fqn = {0}".format(fqn))
         properties = schema["properties"]
-        print(properties)
-
         param_with_type = []
         for property_name in properties.keys():
-            print("parsing property - {}".format(property_name))
-
             property_bag = properties[property_name]
             arg_str = parse_anyof(property_bag) or parse_type(property_bag)
             param_with_type.append("{}: {}".format(property_name, arg_str))
+        print("\n" + fqn)
         print(", ".join(param_with_type))
+        print("\n")
 
 """
 def parse_type(argument, script):
