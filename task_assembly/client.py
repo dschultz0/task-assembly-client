@@ -94,7 +94,7 @@ class Task(dict):
 
 class AssemblyClient(APIClient):
     # ENDPOINT = 'https://pr60r7m9gi.execute-api.us-west-2.amazonaws.com/Prod'
-    ENDPOINT = "https://api.taskassembly.com"
+    ENDPOINT = "https://legacyapi.taskassembly.com"
 
     def __init__(self, api_key):
         global _client
