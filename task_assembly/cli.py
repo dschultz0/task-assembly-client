@@ -326,7 +326,7 @@ class CLI:
                         t[key] = vv
                         additional_keys.add(key)
                     del t[k]
-                if k in ["Data", "HITs", "Assignments", "Result", "Responses", "Stats"]:
+                elif k in ["Data", "HITs", "Assignments", "Result", "Responses", "Stats", "Sandbox"]:
                     del t[k]
         field_names.extend(sorted(list(additional_keys)))
         with open(output_file, "w", newline="", encoding="utf-8") as fp:
