@@ -342,27 +342,31 @@ class CLI:
         if max_results:
             tasks = itertools.islice(tasks, max_results)
         tasks = list(tasks)
-        field_names = ['TaskId', 'ResponseCount', 'State', 'Stats', 'Definition', 'Errors',
-                       'Batch', 'ExtendRequested','IncompleteDetail', 'QualificationRequirements',
-                       'UseComputedResult', 'TestResponseCount']
-        additional_keys = set()
-        for t in tasks:
-            for k, v in list(t.items()):
-                if isinstance(v, dict):
-                    for kk, vv in v.items():
-                        key = f"{k}.{kk}"
-                        t[key] = vv
-                        additional_keys.add(key)
-                    del t[k]
-                elif k in ["Data", "HITs", "Assignments", "Result", "Responses", "Stats", "Sandbox"]:
-                    del t[k]
-        field_names.extend(sorted(list(additional_keys)))
-        with open(output_file, "w", newline="", encoding="utf-8") as fp:
-            writer = csv.DictWriter(fp, fieldnames=field_names)
-            # Data	HITs	Assignments	Result	Sandbox	Responses
-            writer.writeheader()
-            for task in tasks:
-                writer.writerow(task)
+        if output_file.endswith(".jsonl"):
+            with open(output_file, "w") as fp:
+                fp.writelines([json.dumps(t)+"\n" for t in tasks])
+        else:
+            field_names = ['TaskId', 'ResponseCount', 'State', 'Stats', 'Definition', 'Errors',
+                           'Batch', 'ExtendRequested','IncompleteDetail', 'QualificationRequirements',
+                           'UseComputedResult', 'TestResponseCount']
+            additional_keys = set()
+            for t in tasks:
+                for k, v in list(t.items()):
+                    if isinstance(v, dict):
+                        for kk, vv in v.items():
+                            key = f"{k}.{kk}"
+                            t[key] = vv
+                            additional_keys.add(key)
+                        del t[k]
+                    elif k in ["Data", "HITs", "Assignments", "Result", "Responses", "Stats", "Sandbox"]:
+                        del t[k]
+            field_names.extend(sorted(list(additional_keys)))
+            with open(output_file, "w", newline="", encoding="utf-8") as fp:
+                writer = csv.DictWriter(fp, fieldnames=field_names)
+                # Data	HITs	Assignments	Result	Sandbox	Responses
+                writer.writeheader()
+                for task in tasks:
+                    writer.writerow(task)
 
     def reset_worker_score(self,
                            worker_id=None,
