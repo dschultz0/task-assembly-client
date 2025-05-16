@@ -406,7 +406,7 @@ class CLI:
             with open(output_file, "w", encoding="utf-8") as fp:
                 fp.writelines([json.dumps(a) + "\n" for a in assignments])
         else:
-            field_order = ['TaskId', 'AssignmentId', 'WorkerId', 'Accepted', 'Submitted', 'Answer', 'Result', 'Excluded', 'TestData', 'Score']
+            field_order = ['TaskId', 'AssignmentId', 'WorkerId', 'Batch', 'Accepted', 'Submitted', 'Answer', 'Result', 'Excluded', 'TestData', 'Score']
             field_map = defaultdict(set)
             compound_fields = ['Answer', 'TestData']
             records = []
