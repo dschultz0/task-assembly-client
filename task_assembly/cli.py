@@ -95,7 +95,7 @@ class CLI:
                 json.dump(definition["GoldAnswers"], fp, indent=4)
 
     def create_task(self, definition_file, assignments, sandbox, values, max_assignments, quals, tags,
-                    use_computed_result=False):
+                    use_computed_result=False, input_file=None):
         definition = self.read_definition(definition_file)
         params = {
             "definition_id": definition["DefinitionId"],
@@ -107,7 +107,10 @@ class CLI:
             params["max_assignments"] = max_assignments
         if sandbox:
             params["sandbox"] = True
-        if isinstance(values, list):
+        if input_file:
+            with open(input_file) as fp:
+                params["data"] = json.load(fp)
+        elif isinstance(values, list):
             vals = [v.split("=") for v in values]
             params["data"] = {v[0]: v[1] for v in vals}
         else:
@@ -701,6 +704,7 @@ def main():
     ct_parser.add_argument("--quals", type=str)
     ct_parser.add_argument("--use_computed_result", action="store_true")
     ct_parser.add_argument("--tag", dest="tags", nargs=2, action="append")
+    ct_parser.add_argument("--input_file", type=str)
     ct_parser.set_defaults(func=CLI.create_task)
 
     gt_parser = subparsers.add_parser("get_task")
