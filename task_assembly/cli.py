@@ -163,6 +163,31 @@ class CLI:
         print(f"A batch with id {batch_id} has been created")
         print(f"Results will be written to {output_uri}")
 
+    def exclude_assignments(self, definition_file, assignment_file):
+        definition = self.read_definition(definition_file)
+        with open(assignment_file) as fp:
+            reader = csv.DictReader(fp)
+            count = 0
+            for i, row in enumerate(reader):
+                self.client.exclude_assignment(
+                    row["TaskId"],
+                    row["AssignmentId"],
+                    row["WorkerId"],
+                )
+                count += 1
+                if (i+1) % 100 == 0:
+                    print(f"{i+1} assignments excluded")
+        print(f"Excluded {count} assignments")
+
+    def exclude_workers(self, definition_file, worker_file):
+        definition = self.read_definition(definition_file)
+        with open(worker_file) as fp:
+            for row in fp.readlines():
+                self.client.exclude_worker(
+                    row.strip(),
+                    definition["DefinitionId"],
+                )
+
     def get_batch_status(self, batch_id):
         response = self.client.get_batch(batch_id)
         print(f"Batch {response['Id']}: {response['Name']}")
@@ -793,6 +818,16 @@ def main():
     rws_parser.add_argument("--definition_file", default="definition.yaml")
     rws_parser.add_argument("--definition_id")
     rws_parser.set_defaults(func=CLI.reset_worker_score)
+
+    ea_parser = subparsers.add_parser("exclude_assignments")
+    ea_parser.add_argument("--definition_file", default="definition.yaml")
+    ea_parser.add_argument("assignment_file")
+    ea_parser.set_defaults(func=CLI.exclude_assignments)
+
+    ew_parser = subparsers.add_parser("exclude_workers")
+    ew_parser.add_argument("--definition_file", default="definition.yaml")
+    ew_parser.add_argument("worker_file")
+    ew_parser.set_defaults(func=CLI.exclude_workers)
 
     args = parser.parse_args()
 

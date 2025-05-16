@@ -503,12 +503,27 @@ class AssemblyClient(APIClient):
                 yield assignment
 
     @_arg_decorator
-    def exclude_worker(self, worker_id, reverse=False):
+    def exclude_worker(self, worker_id, definition_id = None, reverse=False):
         url = self.ENDPOINT + "/worker/exclude"
         params = self._map_parameters(
             locals(),
             self.exclude_worker.actual_kwargs,
-            {"worker_id": "WorkerId", "reverse": "Reverse"},
+            {"worker_id": "WorkerId", "definition_id": "TaskDefinitionId", "reverse": "Reverse"},
+        )
+        self.post(url, data=params)
+
+    @_arg_decorator
+    def exclude_assignment(self, task_id, assignment_id, worker_id, reverse=False):
+        url = self.ENDPOINT + "/assignment/exclude"
+        params = self._map_parameters(
+            locals(),
+            self.exclude_assignment.actual_kwargs,
+            {
+                "task_id": "TaskId",
+                "assignment_id": "AssignmentId",
+                "worker_id": "WorkerId",
+                "reverse": "Reverse"
+            },
         )
         self.post(url, data=params)
 
