@@ -4,6 +4,8 @@ import os.path
 import posixpath
 import sys
 from pathlib import Path
+
+import boto3
 from pkg_resources import resource_filename
 import shutil
 from datetime import datetime
@@ -642,7 +644,21 @@ def load_config(ta_config, profile) -> str:
         print(f"No configuration found for {profile} profile")
         exit(1)
     profile_credentials = profile_config["credentials"]
-    if profile_credentials.get("aws_profile"):
+    if profile_credentials.get("aws_role"):
+        aws_profile = profile_credentials.get("aws_profile")
+        session = boto3.Session(profile_name=aws_profile) if aws_profile else boto3.Session()
+        sts = session.client("sts")
+        assumed_role_object = sts.assume_role(
+            RoleArn=profile_credentials.get("aws_role"), RoleSessionName="TaskAssemblySession"
+        )
+        credentials = assumed_role_object["Credentials"]
+        session = boto3.Session(
+            aws_access_key_id=credentials["AccessKeyId"],
+            aws_secret_access_key=credentials["SecretAccessKey"],
+            aws_session_token=credentials["SessionToken"],
+        )
+        lry.set_session(boto_session=session)
+    elif profile_credentials.get("aws_profile"):
         lry.set_session(profile_name=profile_credentials.get("aws_profile"))
     api_key = None
     if "api_key" in profile_credentials:
@@ -668,6 +684,7 @@ def main():
     c_parser.add_argument("--key")
     c_parser.add_argument("--key_secret")
     c_parser.add_argument("--aws_profile")
+    c_parser.add_argument("--aws_role")
     c_parser.add_argument("--validate", action="store_true")
 
     ex_parser = subparsers.add_parser("example")
@@ -843,7 +860,7 @@ def main():
     ta_config = ta_dir.joinpath("config.toml")
     profile = args.profile if args.profile else "default"
 
-    if args.command == "configure" and (args.key or args.key_secret or args.aws_profile):
+    if args.command == "configure" and (args.key or args.key_secret or args.aws_profile or args.aws_role):
         ta_dir.mkdir(exist_ok=True)
         config = {"version": "0.1"}
         if ta_config.exists():
@@ -861,6 +878,8 @@ def main():
             creds["api_key_secret"] = args.key_secret
         if args.aws_profile:
             creds["aws_profile"] = args.aws_profile
+        if args.aws_role:
+            creds["aws_role"] = args.aws_role
         with open(ta_config, "w") as fp:
             toml.dump(config, fp)
         if not args.validate:
