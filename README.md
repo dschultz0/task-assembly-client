@@ -45,11 +45,11 @@ When building the example application, use `Numbers` as the definition name.
 task-assembly create_task_definition <definition_name> <task_type_id>
 ```
 
-This will generate a new definition for our project and write a definition.json file that we will use to capture
+This will generate a new definition for our project and write a definition.yaml file that we will use to capture
 our task attributes.
 
 ## Build the Task Definition
-Now we can update the `definition.json` file with the appropriate attributes for our task. We've included
+Now we can update the `definition.yaml` file with the appropriate attributes for our task. We've included
 the core attributes for the example task below:
 
 ```yaml
@@ -74,7 +74,7 @@ task-assembly update_task_definition
 The task interface for our project is in the `template.html` file, and you will note that it uses a very similar 
 templating language as Amazon SageMaker Ground Truth and the Amazon MTurk website. In most cases you can simply
 copy/paste existing task templates from those tools and update the variable names within the `{{ name }}` values.
-To apply this new task template to our definition, we can simply add a reference to it in our `definition.json` file:
+To apply this new task template to our definition, we can simply add a reference to it in our `definition.yaml` file:
 
 ```yaml
 TemplateFile: template.html
@@ -84,7 +84,7 @@ Then run the `update_task_defintion` command again.
 task-assembly update_task_definition
 ```
 
-The `update_task_definition` command can be used to submit any future changes you make to your definition.json.
+The `update_task_definition` command can be used to submit any future changes you make to your definition.yaml.
 
 ## Create a task in the sandbox
 Now that we've completed the setup for our task, we should start by creating a test task in the *Sandbox* environment.
@@ -188,7 +188,7 @@ them normally using your preferred approach (Console, Cloud Formation, CDK, etc)
 
 If building the example application you'll find the handler code for this tutorial in the `handlers.py` file. The first 
 function `process_response` simply retrieves the `numberAsText` form field and returns it. We can pull it into our 
-project adding the following to our `definition.json`:
+project adding the following to our `definition.yaml`:
 
 ```yaml
 HandlerFile: handlers.py
@@ -231,7 +231,7 @@ Next, we want to consolidate these two responses into a single value as a result
 add a *consolidation* handler. The `consolidate_result` function in the example handles this step by simply looking 
 for agreement between Workers. If two Workers agree, then we'll use that result. If not, we'll return `{'extend': True}` 
 which will prompt Task Assembly to ask an additional Worker to provide a response, up to the `MaxAssignments`. To add
-this function to our task definition, we simply include the following in our `definition.json`.
+this function to our task definition, we simply include the following in our `definition.yaml`.
 
 ```yaml
 HandlerFile: handlers.py
@@ -288,7 +288,7 @@ this we'll use a very simple comparison and give them a score of 100 if they pro
 80 if they don't match on the inclusion of "and" or "-" in their answer (i.e. "twenty-four" or 
 "one hundred and six"), and 0 if they still don't match.
 
-The following statements can be added to our `definition.json` file to enable scoring of new workers.
+The following statements can be added to our `definition.yaml` file to enable scoring of new workers.
 As you can see, Workers will need to complete at least two tests with an average score of 80 before 
 they can begin working on the *real* tasks. Note that because it generally takes at least 10-15 seconds 
 before scoring is complete so Workers will often be asked to do a third test if they quickly accept another
